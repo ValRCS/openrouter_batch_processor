@@ -18,8 +18,14 @@ def process_job(job_id, meta):
     api_key = meta["api_key"]
     model = meta.get("model", "google/gemini-2.5-flash")
 
+    # for progress tracking
+    files = os.listdir(input_dir)
+    total = len(files)
+    meta["total_files"] = total
+    meta["processed_files"] = 0
+
     rows = []
-    for fname in os.listdir(input_dir):
+    for idx, fname in enumerate(os.listdir(input_dir), start=1):
         fpath = os.path.join(input_dir, fname)
         with open(fpath, "r", encoding="utf-8") as f:
             text = f.read()
@@ -42,6 +48,12 @@ def process_job(job_id, meta):
             reply = f"ERROR: {e}"
 
         rows.append({"file": fname, "output": reply})
+
+        # Update progress
+        meta["processed_files"] = idx
+        with open(os.path.join(job_dir, "meta.json"), "w") as f:
+            json.dump(meta, f, indent=2)
+
         time.sleep(0.2)
 
     # Save CSV

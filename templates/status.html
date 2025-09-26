@@ -2,6 +2,24 @@
 <html>
   <head>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
+    <style>
+      .progress-container {
+        width: 100%;
+        background-color: #eee;
+        border-radius: 6px;
+        margin: 20px 0;
+      }
+      .progress-bar {
+        width: 0%;
+        height: 24px;
+        background-color: #0077cc;
+        border-radius: 6px;
+        text-align: center;
+        color: white;
+        line-height: 24px;
+        font-size: 12px;
+      }
+    </style>
   </head>
   <body>
     <div class="container">
@@ -16,11 +34,37 @@
         <p><strong>Elapsed time:</strong> {{ elapsed_time }}</p>
       {% endif %}
 
+      <!-- Progress Bar -->
+      <div class="progress-container">
+        <div id="progress-bar" class="progress-bar">0%</div>
+      </div>
+      <p id="progress-text"></p>
+
       {% if result_url and zip_filename %}
         <p><a href="{{ result_url }}">Download results ({{ zip_filename }})</a></p>
       {% endif %}
 
       <p><a href="/">Back to home</a></p>
     </div>
+
+    <script>
+      function updateProgress() {
+        fetch("/progress/{{ job_id }}")
+          .then(r => r.json())
+          .then(data => {
+            if (data.total > 0) {
+              let percent = Math.floor((data.processed / data.total) * 100);
+              let bar = document.getElementById("progress-bar");
+              bar.style.width = percent + "%";
+              bar.textContent = percent + "%";
+              document.getElementById("progress-text").textContent =
+                data.processed + " / " + data.total + " files";
+            }
+          })
+          .catch(err => console.log("Progress fetch error:", err));
+      }
+      setInterval(updateProgress, 3000); // every 3s
+      updateProgress(); // initial call
+    </script>
   </body>
 </html>

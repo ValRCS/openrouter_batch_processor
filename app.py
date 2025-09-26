@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for, send_file
+from flask import Flask, request, render_template, redirect, url_for, send_file, jsonify
 import os, uuid, zipfile, json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -107,6 +107,19 @@ def download(job_id):
     latest_zip = max(zips)
     zip_path = os.path.join(job_dir, latest_zip)
     return send_file(zip_path, as_attachment=True)
+
+@app.route("/progress/<job_id>")
+def progress(job_id):
+    job_dir = os.path.join(app.config["UPLOAD_FOLDER"], job_id)
+    meta_file = os.path.join(job_dir, "meta.json")
+    if not os.path.exists(meta_file):
+        return jsonify({"error": "No such job"}), 404
+    with open(meta_file) as f:
+        meta = json.load(f)
+    total = meta.get("total_files", 0)
+    done = meta.get("processed_files", 0)
+    return jsonify({"processed": done, "total": total})
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=9513, debug=True)
