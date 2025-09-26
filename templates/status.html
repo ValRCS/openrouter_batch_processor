@@ -50,11 +50,18 @@
 
       <p><a href="/">Back to home</a></p>
     </div>
+    <footer>
+      <p style="font-size: 0.8em; color: #666; text-align: center; margin-top: 40px;">
+        &copy; 2025 LNB OpenRouter Batch Processor
+      </p>
+    </footer>
+    <!-- Progress update script -->
 
     <script>
       let jobFinished = false;
       function updateProgress() {
-        fetch("/progress/{{ job_id }}")
+        //relative URL to avoid CORS issues
+        fetch("progress/{{ job_id }}")
           .then(r => r.json())
           .then(data => {
             if (data.total > 0) {
