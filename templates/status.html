@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <body>
+    <h1>Job {{ job_id }}</h1>
+    <p>Status: {{ status }}</p>
+    <p>Model: {{ model }}</p>
+    <p>Submitted at: {{ submitted_at }}</p>
+    {% if completed_at %}
+      <p>Completed at: {{ completed_at }}</p>
+    {% endif %}
+    {% if elapsed_time %}
+      <p>Elapsed time: {{ elapsed_time }}</p>
+    {% endif %}
+    {% if result_url and zip_filename %}
+      <p><a href="{{ result_url }}">Download results ({{ zip_filename }})</a></p>
+    {% endif %}
+    <p><a href="/">Back to home</a></p>
+  </body>
+</html>
