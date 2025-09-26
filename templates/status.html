@@ -1,19 +1,26 @@
 <!doctype html>
 <html>
+  <head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
+  </head>
   <body>
-    <h1>Job {{ job_id }}</h1>
-    <p>Status: {{ status }}</p>
-    <p>Model: {{ model }}</p>
-    <p>Submitted at: {{ submitted_at }}</p>
-    {% if completed_at %}
-      <p>Completed at: {{ completed_at }}</p>
-    {% endif %}
-    {% if elapsed_time %}
-      <p>Elapsed time: {{ elapsed_time }}</p>
-    {% endif %}
-    {% if result_url and zip_filename %}
-      <p><a href="{{ result_url }}">Download results ({{ zip_filename }})</a></p>
-    {% endif %}
-    <p><a href="/">Back to home</a></p>
+    <div class="container">
+      <h1>Job {{ job_id }}</h1>
+      <p><strong>Status:</strong> {{ status }}</p>
+      <p><strong>Model:</strong> {{ model }}</p>
+      <p><strong>Submitted at:</strong> {{ submitted_at }}</p>
+      {% if completed_at %}
+        <p><strong>Completed at:</strong> {{ completed_at }}</p>
+      {% endif %}
+      {% if elapsed_time %}
+        <p><strong>Elapsed time:</strong> {{ elapsed_time }}</p>
+      {% endif %}
+
+      {% if result_url and zip_filename %}
+        <p><a href="{{ result_url }}">Download results ({{ zip_filename }})</a></p>
+      {% endif %}
+
+      <p><a href="/">Back to home</a></p>
+    </div>
   </body>
 </html>
