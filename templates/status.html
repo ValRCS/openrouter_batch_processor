@@ -78,6 +78,8 @@
                 setTimeout(() => {
                   location.reload();
                 }, 1500); // reload to show download link
+                // Stop further updates
+                clearInterval(this);
               }
             }
           })
