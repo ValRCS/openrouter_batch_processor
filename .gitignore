@@ -25,3 +25,5 @@ var/
 .DS_Store
 *.sqlite3
 data/jobs/*
+.venv/
+logs/
