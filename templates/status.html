@@ -12,12 +12,16 @@
       .progress-bar {
         width: 0%;
         height: 24px;
-        background-color: #0077cc;
+        background-color: #0077cc; /* blue by default */
         border-radius: 6px;
         text-align: center;
         color: white;
         line-height: 24px;
         font-size: 12px;
+        transition: width 0.5s ease;
+      }
+      .progress-bar.finished {
+        background-color: #28a745; /* green when done */
       }
     </style>
   </head>
@@ -48,6 +52,7 @@
     </div>
 
     <script>
+      let jobFinished = false;
       function updateProgress() {
         fetch("/progress/{{ job_id }}")
           .then(r => r.json())
@@ -59,12 +64,20 @@
               bar.textContent = percent + "%";
               document.getElementById("progress-text").textContent =
                 data.processed + " / " + data.total + " files";
+
+              if (data.processed === data.total && !jobFinished) {
+                jobFinished = true;
+                bar.classList.add("finished"); // turn green
+                setTimeout(() => {
+                  location.reload();
+                }, 1500); // reload to show download link
+              }
             }
           })
           .catch(err => console.log("Progress fetch error:", err));
       }
-      setInterval(updateProgress, 3000); // every 3s
-      updateProgress(); // initial call
+      setInterval(updateProgress, 3000);
+      updateProgress();
     </script>
   </body>
 </html>
