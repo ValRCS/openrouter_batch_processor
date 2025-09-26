@@ -61,7 +61,7 @@
       let jobFinished = false;
       function updateProgress() {
         //relative URL to avoid CORS issues
-        fetch("/progress/{{ job_id }}")
+        fetch("progress/{{ job_id }}")
           .then(r => r.json())
           .then(data => {
             if (data.total > 0) {
