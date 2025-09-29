@@ -1,4 +1,6 @@
 import os, requests, pandas as pd, time, json, zipfile
+import base64
+import mimetypes
 from datetime import datetime
 from config import UPLOAD_FOLDER
 
@@ -27,27 +29,49 @@ def process_job(job_id, meta):
     rows = []
     for idx, fname in enumerate(os.listdir(input_dir), start=1):
         fpath = os.path.join(input_dir, fname)
-        with open(fpath, "r", encoding="utf-8") as f:
-            text = f.read()
+        ext = os.path.splitext(fname)[1].lower()
+
+        user_content = []
+
+        if ext in [".txt", ".md"]:
+            with open(fpath, "r", encoding="utf-8") as f:
+                text = f.read()
+            user_content.append({"type": "text", "text": text})
+
+        elif ext in [".jpg", ".jpeg", ".png", ".tif", ".tiff"]:
+            mime, _ = mimetypes.guess_type(fpath)
+            if mime is None:
+                mime = "image/png"  # fallback
+            with open(fpath, "rb") as img_file:
+                img_b64 = base64.b64encode(img_file.read()).decode("utf-8")
+            user_content.append({"type": "text", "text": f"Please analyze image: {fname}"})
+            user_content.append({"type": "image_url", "image_url": {"url": f"data:{mime};base64,{img_b64}"}})
+
+        else:
+            # unsupported type
+            rows.append({"file": fname, "output": "Unsupported file type"})
+            continue
 
         payload = {
-            "model": model,
+            "model": meta.get("model", "google/gemini-2.5-flash"),
             "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": text}
+                {"role": "system", "content": meta["system_prompt"]},
+                {"role": "user", "content": user_content}
             ]
         }
 
-        headers = {"Authorization": f"Bearer {api_key}"}
+        headers = {"Authorization": f"Bearer {meta['api_key']}"}
+
         try:
-            r = requests.post(OPENROUTER_URL, json=payload, headers=headers, timeout=60)
+            r = requests.post(OPENROUTER_URL, json=payload, headers=headers, timeout=120)
             r.raise_for_status()
             data = r.json()
             reply = data["choices"][0]["message"]["content"]
         except Exception as e:
             reply = f"ERROR: {e}"
 
-        rows.append({"file": fname, "output": reply})
+            rows.append({"file": fname, "output": reply})
+
 
         # Update progress
         meta["processed_files"] = idx
