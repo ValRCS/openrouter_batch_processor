@@ -70,7 +70,7 @@ def process_job(job_id, meta):
         except Exception as e:
             reply = f"ERROR: {e}"
 
-            rows.append({"file": fname, "output": reply})
+        rows.append({"file": fname, "output": reply})
 
 
         # Update progress
