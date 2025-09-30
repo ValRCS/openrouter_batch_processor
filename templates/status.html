@@ -58,7 +58,7 @@
     <!-- Progress update script -->
 
     <script>
-      let jobFinished = false;
+       let intervalId = null;
       function updateProgress() {
         //relative URL to avoid CORS issues
         fetch("../progress/{{ job_id }}")
@@ -72,20 +72,23 @@
               document.getElementById("progress-text").textContent =
                 data.processed + " / " + data.total + " files";
 
-              if (data.processed === data.total && !jobFinished) {
+              if (data.processed === data.total) {
                 jobFinished = true;
                 bar.classList.add("finished"); // turn green
                 setTimeout(() => {
                   location.reload();
                 }, 1500); // reload to show download link
-                // Stop further updates
-                clearInterval(this);
+                // Stop polling once finished 
+                if (intervalId) {
+                  console.log("Stopping progress polling.", intervalId);
+                  clearInterval(intervalId);
+                }
               }
             }
           })
           .catch(err => console.log("Progress fetch error:", err));
       }
-      setInterval(updateProgress, 3000);
+      intervalId = setInterval(updateProgress, 3000);
       updateProgress();
     </script>
   </body>
