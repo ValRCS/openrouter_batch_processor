@@ -10,6 +10,7 @@ def process_job(job_id, meta):
     job_dir = os.path.join(UPLOAD_FOLDER, job_id)
     input_dir = os.path.join(job_dir, "input")
     output_path = os.path.join(job_dir, "output.csv")
+    input_csv_path = os.path.join(job_dir, "input.csv")   # <-- new file
 
     # Generate timestamped ZIP name
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
@@ -27,9 +28,20 @@ def process_job(job_id, meta):
     meta["processed_files"] = 0
 
     rows = []
+    input_rows = []   # <-- for input.csv
+
     for idx, fname in enumerate(os.listdir(input_dir), start=1):
         fpath = os.path.join(input_dir, fname)
         ext = os.path.splitext(fname)[1].lower()
+        size = os.path.getsize(fpath)
+
+        # collect metadata for input.csv
+        input_rows.append({
+            "file_name": fname,
+            "full_path": os.path.join("input", fname),  # relative path
+            "file_type": ext if ext else "unknown",
+            "file_size": size
+        })
 
         user_content = []
 
@@ -82,6 +94,9 @@ def process_job(job_id, meta):
 
     # Save CSV
     pd.DataFrame(rows).to_csv(output_path, index=False)
+    # sort input.csv rows alphabetically by file_name
+    df_input = pd.DataFrame(input_rows).sort_values(by="file_name")
+    df_input.to_csv(input_csv_path, index=False)   # <-- save input.csv
 
     # Save completion timestamp & elapsed time
     completed_at = datetime.now()
@@ -103,6 +118,7 @@ def process_job(job_id, meta):
     # Create results.zip
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.write(output_path, arcname="output.csv")
+        zf.write(input_csv_path, arcname="input.csv")   # <-- include in zip
         if os.path.exists(meta_file):
             zf.write(meta_file, arcname="meta.json")
         for fname in os.listdir(input_dir):
