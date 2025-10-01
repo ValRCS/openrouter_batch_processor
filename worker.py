@@ -121,8 +121,10 @@ def process_job(job_id, meta):
         zf.write(input_csv_path, arcname="input.csv")   # <-- include in zip
         if os.path.exists(meta_file):
             zf.write(meta_file, arcname="meta.json")
-        for fname in os.listdir(input_dir):
-            fpath = os.path.join(input_dir, fname)
-            zf.write(fpath, arcname=os.path.join("input", fname))
+        # Only include inputs if requested
+        if meta.get("include_inputs", False):
+            for fname in os.listdir(input_dir):
+                fpath = os.path.join(input_dir, fname)
+                zf.write(fpath, arcname=os.path.join("input", fname))
 
     return zip_path

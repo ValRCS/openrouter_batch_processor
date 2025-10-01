@@ -32,11 +32,14 @@ def index():
             zf.extractall(os.path.join(job_dir, "input"))
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        include_inputs = "include_inputs" in request.form
+
         meta = {
             "api_key": api_key,
             "system_prompt": system_prompt,
             "model": model,
-            "submitted_at": timestamp
+            "submitted_at": timestamp,
+            "include_inputs": include_inputs
         }
 
         with open(os.path.join(job_dir, "meta.json"), "w") as f:
@@ -75,7 +78,8 @@ def status(job_id):
                 completed_at=completed_at,
                 elapsed_time=elapsed_time,
                 result_url=url_for("download", job_id=job_id),
-                zip_filename=zip_filename
+                zip_filename=zip_filename,
+                include_inputs=meta.get("include_inputs", False)
             )
         except Exception as e:
             return render_template(
@@ -91,7 +95,8 @@ def status(job_id):
             job_id=job_id,
             status="Running",
             model=model,
-            submitted_at=submitted_at
+            submitted_at=submitted_at,
+            include_inputs=meta.get("include_inputs", False)
         )
 
 @app.route("/download/<job_id>")

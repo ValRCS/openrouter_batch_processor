@@ -30,6 +30,7 @@
       <h1>Job {{ job_id }}</h1>
       <p><strong>Status:</strong> {{ status }}</p>
       <p><strong>Model:</strong> {{ model }}</p>
+      <p><strong>Include inputs in output zip:</strong> {{ "Yes" if include_inputs else "No" }}</p>
       <p><strong>Submitted at:</strong> {{ submitted_at }}</p>
       {% if completed_at %}
         <p><strong>Completed at:</strong> {{ completed_at }}</p>
