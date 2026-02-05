@@ -7,8 +7,8 @@
     <div class="container">
       <h1>Jobs Archive</h1>
       {% macro sort_links(field) -%}
-        <a class="sort-arrow{% if sort_by == field and sort_dir == 'asc' %} active{% endif %}" href="{{ url_for('jobs_archive', sort_by=field, sort_dir='asc') }}">&uarr;</a>
-        <a class="sort-arrow{% if sort_by == field and sort_dir == 'desc' %} active{% endif %}" href="{{ url_for('jobs_archive', sort_by=field, sort_dir='desc') }}">&darr;</a>
+        <a class="sort-arrow{% if sort_by == field and sort_dir == 'asc' %} active{% endif %}" href="{{ url_for('jobs_archive', sort_by=field, sort_dir='asc') }}">▲</a>
+        <a class="sort-arrow{% if sort_by == field and sort_dir == 'desc' %} active{% endif %}" href="{{ url_for('jobs_archive', sort_by=field, sort_dir='desc') }}">▼</a>
       {%- endmacro %}
       <table class="jobs-table">
         <thead>
