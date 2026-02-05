@@ -6,30 +6,20 @@
   <body>
     <div class="container">
       <h1>Jobs Archive</h1>
-      <form method="get" class="jobs-sort">
-        <label for="sort_by">Sort by:</label>
-        <select id="sort_by" name="sort_by">
-          {% for key, label in sort_fields.items() %}
-            <option value="{{ key }}" {% if sort_by == key %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-        <label for="sort_dir">Direction:</label>
-        <select id="sort_dir" name="sort_dir">
-          <option value="asc" {% if sort_dir == "asc" %}selected{% endif %}>Ascending</option>
-          <option value="desc" {% if sort_dir == "desc" %}selected{% endif %}>Descending</option>
-        </select>
-        <input type="submit" value="Sort">
-      </form>
+      {% macro sort_links(field) -%}
+        <a class="sort-arrow{% if sort_by == field and sort_dir == 'asc' %} active{% endif %}" href="{{ url_for('jobs_archive', sort_by=field, sort_dir='asc') }}">&uarr;</a>
+        <a class="sort-arrow{% if sort_by == field and sort_dir == 'desc' %} active{% endif %}" href="{{ url_for('jobs_archive', sort_by=field, sort_dir='desc') }}">&darr;</a>
+      {%- endmacro %}
       <table class="jobs-table">
         <thead>
           <tr>
             <th>Job ID</th>
-            <th>Submitted At</th>
-            <th>Model</th>
-            <th>Status</th>
-            <th>Route</th>
-            <th>Filename</th>
-            <th>Elapsed Time</th>
+            <th>Submitted At {{ sort_links("submitted_at") }}</th>
+            <th>Model {{ sort_links("model") }}</th>
+            <th>Status {{ sort_links("status") }}</th>
+            <th>Route {{ sort_links("route") }}</th>
+            <th>Filename {{ sort_links("filename") }}</th>
+            <th>Elapsed Time {{ sort_links("elapsed_time") }}</th>
             <th>Download</th>
           </tr>
         </thead>
