@@ -3,7 +3,7 @@
   <head>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
   </head>
-  <body>
+  <body data-cache-scope="main">
     <div class="container">
       <h1>Batch LLM Classifier</h1>
       <form method="post" enctype="multipart/form-data">
@@ -29,5 +29,6 @@
         <input type="submit" value="Submit Job">
       </form>
     </div>
+    <script src="{{ url_for('static', filename='scripts/form-cache.js') }}"></script>
   </body>
 </html>
