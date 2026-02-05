@@ -12,8 +12,7 @@ executor = ThreadPoolExecutor(max_workers=4)
 jobs = {}
 metas = {}
 
-@app.route("/", methods=["GET", "POST"])
-def index():
+def handle_submission(template_name):
     if request.method == "POST":
         api_key = request.form["api_key"]
         system_prompt = request.form["system_prompt"]
@@ -51,7 +50,15 @@ def index():
 
         return redirect(url_for("status", job_id=job_id))
 
-    return render_template("index.html")
+    return render_template(template_name)
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    return handle_submission("index.html")
+
+@app.route("/marc", methods=["GET", "POST"])
+def marc():
+    return handle_submission("marc.html")
 
 @app.route("/status/<job_id>")
 def status(job_id):
