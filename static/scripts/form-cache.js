@@ -13,10 +13,16 @@
   const promptField = document.querySelector('textarea[name="system_prompt"]');
   const modelDropdown = document.querySelector('select[name="model_dropdown"]');
   const modelCustom = document.querySelector('input[name="model_custom"]');
+  const apiKeyField = document.querySelector('input[name="api_key"]');
 
   const storedPrompt = localStorage.getItem(key("system_prompt"));
   if (storedPrompt !== null && promptField) {
     promptField.value = storedPrompt;
+  }
+
+  const storedApiKey = localStorage.getItem(key("api_key"));
+  if (storedApiKey !== null && apiKeyField) {
+    apiKeyField.value = storedApiKey;
   }
 
   const storedModel = localStorage.getItem(key("model"));
@@ -40,6 +46,10 @@
   }
 
   form.addEventListener("submit", () => {
+    if (apiKeyField) {
+      localStorage.setItem(key("api_key"), apiKeyField.value);
+    }
+
     if (promptField) {
       localStorage.setItem(key("system_prompt"), promptField.value);
     }
