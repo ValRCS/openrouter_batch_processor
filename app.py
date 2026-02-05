@@ -12,7 +12,7 @@ executor = ThreadPoolExecutor(max_workers=4)
 jobs = {}
 metas = {}
 
-def handle_submission(template_name, group_by_subfolder=False):
+def handle_submission(template_name, group_by_subfolder=False, source_route="index"):
     if request.method == "POST":
         api_key = request.form["api_key"]
         system_prompt = request.form["system_prompt"]
@@ -43,7 +43,8 @@ def handle_submission(template_name, group_by_subfolder=False):
             "include_inputs": include_inputs,
             "group_by_subfolder": group_by_subfolder,
             "separate_outputs": separate_outputs,
-            "include_metadata": include_metadata
+            "include_metadata": include_metadata,
+            "source_route": source_route
         }
 
         with open(os.path.join(job_dir, "meta.json"), "w") as f:
@@ -59,11 +60,11 @@ def handle_submission(template_name, group_by_subfolder=False):
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    return handle_submission("index.html")
+    return handle_submission("index.html", source_route="index")
 
 @app.route("/marc", methods=["GET", "POST"])
 def marc():
-    return handle_submission("marc.html", group_by_subfolder=True)
+    return handle_submission("marc.html", group_by_subfolder=True, source_route="marc")
 
 @app.route("/status/<job_id>")
 def status(job_id):
@@ -76,6 +77,14 @@ def status(job_id):
     submitted_at = meta.get("submitted_at", "unknown")
     completed_at = meta.get("completed_at", None)
     elapsed_time = meta.get("elapsed_time", None)
+
+    source_route = meta.get("source_route")
+    if not source_route and meta.get("group_by_subfolder"):
+        source_route = "marc"
+
+    is_marc = source_route == "marc"
+    back_url = url_for("marc") if is_marc else url_for("index")
+    back_label = "Back to MARC" if is_marc else "Back to home"
 
     if future.done():
         try:
@@ -91,7 +100,9 @@ def status(job_id):
                 elapsed_time=elapsed_time,
                 result_url=url_for("download", job_id=job_id),
                 zip_filename=zip_filename,
-                include_inputs=meta.get("include_inputs", False)
+                include_inputs=meta.get("include_inputs", False),
+                back_url=back_url,
+                back_label=back_label
             )
         except Exception as e:
             return render_template(
@@ -99,7 +110,9 @@ def status(job_id):
                 job_id=job_id,
                 status=f"Error: {e}",
                 model=model,
-                submitted_at=submitted_at
+                submitted_at=submitted_at,
+                back_url=back_url,
+                back_label=back_label
             )
     else:
         return render_template(
@@ -108,7 +121,9 @@ def status(job_id):
             status="Running",
             model=model,
             submitted_at=submitted_at,
-            include_inputs=meta.get("include_inputs", False)
+            include_inputs=meta.get("include_inputs", False),
+            back_url=back_url,
+            back_label=back_label
         )
 
 @app.route("/download/<job_id>")
