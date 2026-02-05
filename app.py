@@ -12,7 +12,7 @@ executor = ThreadPoolExecutor(max_workers=4)
 jobs = {}
 metas = {}
 
-def handle_submission(template_name):
+def handle_submission(template_name, group_by_subfolder=False):
     if request.method == "POST":
         api_key = request.form["api_key"]
         system_prompt = request.form["system_prompt"]
@@ -38,7 +38,8 @@ def handle_submission(template_name):
             "system_prompt": system_prompt,
             "model": model,
             "submitted_at": timestamp,
-            "include_inputs": include_inputs
+            "include_inputs": include_inputs,
+            "group_by_subfolder": group_by_subfolder
         }
 
         with open(os.path.join(job_dir, "meta.json"), "w") as f:
@@ -58,7 +59,7 @@ def index():
 
 @app.route("/marc", methods=["GET", "POST"])
 def marc():
-    return handle_submission("marc.html")
+    return handle_submission("marc.html", group_by_subfolder=True)
 
 @app.route("/status/<job_id>")
 def status(job_id):

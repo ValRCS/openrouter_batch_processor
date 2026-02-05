@@ -6,6 +6,97 @@ from config import UPLOAD_FOLDER
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
+TEXT_EXTENSIONS = {".txt", ".md"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
+
+def _normalize_rel(path, base_dir):
+    return os.path.relpath(path, base_dir).replace(os.sep, "/")
+
+def _list_files_sorted(base_dir):
+    files = []
+    for root, _, filenames in os.walk(base_dir):
+        for fname in filenames:
+            files.append(os.path.join(root, fname))
+    files.sort(key=lambda p: _normalize_rel(p, base_dir))
+    return files
+
+def _build_groups(input_dir, group_by_subfolder):
+    groups = []
+    entries = sorted(os.listdir(input_dir))
+
+    if group_by_subfolder:
+        for entry in entries:
+            full = os.path.join(input_dir, entry)
+            if os.path.isdir(full):
+                files = _list_files_sorted(full)
+                group_id = f"{_normalize_rel(full, input_dir)}/"
+                groups.append({"id": group_id, "files": files, "is_folder": True})
+            elif os.path.isfile(full):
+                groups.append({
+                    "id": _normalize_rel(full, input_dir),
+                    "files": [full],
+                    "is_folder": False
+                })
+    else:
+        for entry in entries:
+            full = os.path.join(input_dir, entry)
+            if os.path.isfile(full):
+                groups.append({
+                    "id": _normalize_rel(full, input_dir),
+                    "files": [full],
+                    "is_folder": False
+                })
+
+    return groups
+
+def _collect_input_rows(input_dir):
+    input_rows = []
+    for root, _, filenames in os.walk(input_dir):
+        for fname in filenames:
+            fpath = os.path.join(root, fname)
+            rel = _normalize_rel(fpath, input_dir)
+            ext = os.path.splitext(fname)[1].lower()
+            size = os.path.getsize(fpath)
+            input_rows.append({
+                "file_name": fname,
+                "full_path": f"input/{rel}",
+                "file_type": ext if ext else "unknown",
+                "file_size": size
+            })
+    input_rows.sort(key=lambda row: row["full_path"])
+    return input_rows
+
+def _build_user_content(file_paths, input_dir, label_files):
+    user_content = []
+    supported = 0
+
+    for fpath in file_paths:
+        rel = _normalize_rel(fpath, input_dir)
+        ext = os.path.splitext(fpath)[1].lower()
+
+        if ext in TEXT_EXTENSIONS:
+            with open(fpath, "r", encoding="utf-8") as f:
+                text = f.read()
+            if label_files:
+                text = f"File: {rel}\n{text}"
+            user_content.append({"type": "text", "text": text})
+            supported += 1
+        elif ext in IMAGE_EXTENSIONS:
+            mime, _ = mimetypes.guess_type(fpath)
+            if mime is None:
+                mime = "image/png"
+            with open(fpath, "rb") as img_file:
+                img_b64 = base64.b64encode(img_file.read()).decode("utf-8")
+            label = rel if label_files else os.path.basename(rel)
+            user_content.append({"type": "text", "text": f"Please analyze image: {label}"})
+            user_content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime};base64,{img_b64}"}
+            })
+            supported += 1
+
+    return user_content, supported
+
 def process_job(job_id, meta):
     job_dir = os.path.join(UPLOAD_FOLDER, job_id)
     input_dir = os.path.join(job_dir, "input")
@@ -20,70 +111,54 @@ def process_job(job_id, meta):
     system_prompt = meta["system_prompt"]
     api_key = meta["api_key"]
     model = meta.get("model", "google/gemini-2.5-flash")
+    group_by_subfolder = meta.get("group_by_subfolder", False)
 
     # for progress tracking
-    files = os.listdir(input_dir)
-    total = len(files)
+    groups = _build_groups(input_dir, group_by_subfolder)
+    total = len(groups)
     meta["total_files"] = total
     meta["processed_files"] = 0
 
     rows = []
-    input_rows = []   # <-- for input.csv
+    input_rows = _collect_input_rows(input_dir)   # <-- for input.csv
 
-    for idx, fname in enumerate(os.listdir(input_dir), start=1):
-        fpath = os.path.join(input_dir, fname)
-        ext = os.path.splitext(fname)[1].lower()
-        size = os.path.getsize(fpath)
+    for idx, group in enumerate(groups, start=1):
+        group_id = group["id"]
+        file_paths = group["files"]
 
-        # collect metadata for input.csv
-        input_rows.append({
-            "file_name": fname,
-            "full_path": os.path.join("input", fname),  # relative path
-            "file_type": ext if ext else "unknown",
-            "file_size": size
-        })
-
-        user_content = []
-
-        if ext in [".txt", ".md"]:
-            with open(fpath, "r", encoding="utf-8") as f:
-                text = f.read()
-            user_content.append({"type": "text", "text": text})
-
-        elif ext in [".jpg", ".jpeg", ".png", ".tif", ".tiff"]:
-            mime, _ = mimetypes.guess_type(fpath)
-            if mime is None:
-                mime = "image/png"  # fallback
-            with open(fpath, "rb") as img_file:
-                img_b64 = base64.b64encode(img_file.read()).decode("utf-8")
-            user_content.append({"type": "text", "text": f"Please analyze image: {fname}"})
-            user_content.append({"type": "image_url", "image_url": {"url": f"data:{mime};base64,{img_b64}"}})
-
-        else:
-            # unsupported type
-            rows.append({"file": fname, "output": "Unsupported file type"})
+        if not file_paths:
+            rows.append({"file": group_id, "output": "Empty folder"})
+            meta["processed_files"] = idx
+            with open(os.path.join(job_dir, "meta.json"), "w") as f:
+                json.dump(meta, f, indent=2)
+            time.sleep(0.2)
             continue
 
-        payload = {
-            "model": meta.get("model", "google/gemini-2.5-flash"),
-            "messages": [
-                {"role": "system", "content": meta["system_prompt"]},
-                {"role": "user", "content": user_content}
-            ]
-        }
+        label_files = group["is_folder"] or len(file_paths) > 1
+        user_content, supported = _build_user_content(file_paths, input_dir, label_files)
 
-        headers = {"Authorization": f"Bearer {meta['api_key']}"}
+        if supported == 0:
+            rows.append({"file": group_id, "output": "Unsupported file type"})
+        else:
+            payload = {
+                "model": meta.get("model", "google/gemini-2.5-flash"),
+                "messages": [
+                    {"role": "system", "content": meta["system_prompt"]},
+                    {"role": "user", "content": user_content}
+                ]
+            }
 
-        try:
-            r = requests.post(OPENROUTER_URL, json=payload, headers=headers, timeout=120)
-            r.raise_for_status()
-            data = r.json()
-            reply = data["choices"][0]["message"]["content"]
-        except Exception as e:
-            reply = f"ERROR: {e}"
+            headers = {"Authorization": f"Bearer {meta['api_key']}"}
 
-        rows.append({"file": fname, "output": reply})
+            try:
+                r = requests.post(OPENROUTER_URL, json=payload, headers=headers, timeout=120)
+                r.raise_for_status()
+                data = r.json()
+                reply = data["choices"][0]["message"]["content"]
+            except Exception as e:
+                reply = f"ERROR: {e}"
 
+            rows.append({"file": group_id, "output": reply})
 
         # Update progress
         meta["processed_files"] = idx
@@ -94,8 +169,8 @@ def process_job(job_id, meta):
 
     # Save CSV
     pd.DataFrame(rows).to_csv(output_path, index=False)
-    # sort input.csv rows alphabetically by file_name
-    df_input = pd.DataFrame(input_rows).sort_values(by="file_name")
+    # sort input.csv rows alphabetically by full_path
+    df_input = pd.DataFrame(input_rows).sort_values(by="full_path")
     df_input.to_csv(input_csv_path, index=False)   # <-- save input.csv
 
     # Save completion timestamp & elapsed time
@@ -123,8 +198,8 @@ def process_job(job_id, meta):
             zf.write(meta_file, arcname="meta.json")
         # Only include inputs if requested
         if meta.get("include_inputs", False):
-            for fname in os.listdir(input_dir):
-                fpath = os.path.join(input_dir, fname)
-                zf.write(fpath, arcname=os.path.join("input", fname))
+            for fpath in _list_files_sorted(input_dir):
+                rel = _normalize_rel(fpath, input_dir)
+                zf.write(fpath, arcname=f"input/{rel}")
 
     return zip_path
