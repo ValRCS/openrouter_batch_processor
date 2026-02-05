@@ -47,8 +47,10 @@ def handle_submission(template_name, group_by_subfolder=False, source_route="ind
             "source_route": source_route
         }
 
+        meta_for_disk = dict(meta)
+        meta_for_disk["api_key"] = api_key[-8:] if api_key else ""
         with open(os.path.join(job_dir, "meta.json"), "w") as f:
-            json.dump(meta, f, indent=2)
+            json.dump(meta_for_disk, f, indent=2)
 
         future = executor.submit(process_job, job_id, meta)
         jobs[job_id] = future

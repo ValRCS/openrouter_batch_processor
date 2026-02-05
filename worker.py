@@ -97,6 +97,15 @@ def _build_user_content(file_paths, input_dir, label_files):
 
     return user_content, supported
 
+def _write_meta(job_dir, meta):
+    meta_for_disk = dict(meta)
+    api_key = meta_for_disk.get("api_key", "")
+    meta_for_disk["api_key"] = api_key[-8:] if api_key else ""
+    meta_file = os.path.join(job_dir, "meta.json")
+    with open(meta_file, "w") as f:
+        json.dump(meta_for_disk, f, indent=2)
+    return meta_file
+
 def _output_filename(group_id, is_folder):
     normalized = group_id.rstrip("/")
     base = os.path.basename(normalized) if normalized else "output"
@@ -140,8 +149,7 @@ def process_job(job_id, meta):
         if not file_paths:
             rows.append({"file": group_id, "output": "Empty folder"})
             meta["processed_files"] = idx
-            with open(os.path.join(job_dir, "meta.json"), "w") as f:
-                json.dump(meta, f, indent=2)
+            _write_meta(job_dir, meta)
             time.sleep(0.2)
             continue
 
@@ -173,8 +181,7 @@ def process_job(job_id, meta):
 
         # Update progress
         meta["processed_files"] = idx
-        with open(os.path.join(job_dir, "meta.json"), "w") as f:
-            json.dump(meta, f, indent=2)
+        _write_meta(job_dir, meta)
 
         time.sleep(0.2)
 
@@ -210,9 +217,7 @@ def process_job(job_id, meta):
         except Exception:
             meta["elapsed_time"] = "unknown"
 
-    meta_file = os.path.join(job_dir, "meta.json")
-    with open(meta_file, "w") as f:
-        json.dump(meta, f, indent=2)
+    meta_file = _write_meta(job_dir, meta)
 
     # Create results.zip
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
