@@ -20,6 +20,7 @@
             <th class="sortable">Route {{ sort_links("route") }}</th>
             <th class="sortable">Filename {{ sort_links("filename") }}</th>
             <th class="sortable">Elapsed Time {{ sort_links("elapsed_time") }}</th>
+            <th>Inputs</th>
             <th>Download</th>
           </tr>
         </thead>
@@ -33,6 +34,13 @@
               <td>{{ job.route }}</td>
               <td>{{ job.zip_filename or "-" }}</td>
               <td>{{ job.elapsed_time or "-" }}</td>
+              <td>
+                {% if job.input_download_url %}
+                  <a href="{{ job.input_download_url }}">Download</a>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
               <td>
                 {% if job.download_url %}
                   <a href="{{ job.download_url }}">Download</a>

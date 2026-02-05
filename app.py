@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, redirect, url_for, send_file, jsonify
 import os, uuid, zipfile, json
+from werkzeug.utils import secure_filename
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from config import UPLOAD_FOLDER
@@ -25,7 +26,20 @@ def handle_submission(template_name, group_by_subfolder=False, source_route="ind
         job_dir = os.path.join(app.config["UPLOAD_FOLDER"], job_id)
         os.makedirs(job_dir, exist_ok=True)
 
-        zip_path = os.path.join(job_dir, "input.zip")
+        original_name = secure_filename(file.filename or "")
+        if not original_name:
+            original_name = "upload.zip"
+        elif not original_name.lower().endswith(".zip"):
+            original_name = f"{original_name}.zip"
+
+        input_zip_name = "input.zip"
+        if source_route == "marc":
+            if original_name.lower().startswith("inputs_"):
+                input_zip_name = original_name
+            else:
+                input_zip_name = f"inputs_{original_name}"
+
+        zip_path = os.path.join(job_dir, input_zip_name)
         file.save(zip_path)
         with zipfile.ZipFile(zip_path, "r") as zf:
             zf.extractall(os.path.join(job_dir, "input"))
@@ -44,6 +58,7 @@ def handle_submission(template_name, group_by_subfolder=False, source_route="ind
             "group_by_subfolder": group_by_subfolder,
             "separate_outputs": separate_outputs,
             "include_metadata": include_metadata,
+            "input_zip_name": input_zip_name,
             "source_route": source_route
         }
 
@@ -143,6 +158,41 @@ def download(job_id):
     zip_path = os.path.join(job_dir, latest_zip)
     return send_file(zip_path, as_attachment=True)
 
+@app.route("/download-inputs/<job_id>")
+def download_inputs(job_id):
+    job_dir = os.path.join(app.config["UPLOAD_FOLDER"], job_id)
+    if not os.path.exists(job_dir):
+        return f"Job {job_id} not found", 404
+
+    input_zip_name = None
+    meta_file = os.path.join(job_dir, "meta.json")
+    if os.path.exists(meta_file):
+        try:
+            with open(meta_file) as f:
+                meta = json.load(f)
+            input_zip_name = meta.get("input_zip_name")
+        except Exception:
+            input_zip_name = None
+
+    if input_zip_name:
+        input_zip_path = os.path.join(job_dir, input_zip_name)
+        if not os.path.exists(input_zip_path):
+            input_zip_name = None
+
+    if not input_zip_name:
+        legacy_path = os.path.join(job_dir, "input.zip")
+        if os.path.exists(legacy_path):
+            input_zip_name = "input.zip"
+
+    if not input_zip_name:
+        return f"No inputs for job {job_id}", 404
+
+    input_zip_path = os.path.join(job_dir, input_zip_name)
+    if not os.path.exists(input_zip_path):
+        return f"No inputs for job {job_id}", 404
+
+    return send_file(input_zip_path, as_attachment=True)
+
 @app.route("/progress/<job_id>")
 def progress(job_id):
     job_dir = os.path.join(app.config["UPLOAD_FOLDER"], job_id)
@@ -222,6 +272,19 @@ def jobs_archive():
                 except Exception:
                     submitted_at_dt = None
 
+            input_zip_name = meta.get("input_zip_name")
+            input_zip_path = None
+            if input_zip_name:
+                input_zip_path = os.path.join(job_dir, input_zip_name)
+                if not os.path.exists(input_zip_path):
+                    input_zip_name = None
+                    input_zip_path = None
+            if not input_zip_name:
+                legacy_input = os.path.join(job_dir, "input.zip")
+                if os.path.exists(legacy_input):
+                    input_zip_name = "input.zip"
+                    input_zip_path = legacy_input
+
             job_entries.append({
                 "job_id": job_id,
                 "submitted_at": submitted_at,
@@ -233,6 +296,9 @@ def jobs_archive():
                 "elapsed_time": meta.get("elapsed_time", ""),
                 "download_url": url_for("download", job_id=job_id)
                 if zip_filename and status_text == "Finished"
+                else None,
+                "input_download_url": url_for("download_inputs", job_id=job_id)
+                if input_zip_path
                 else None,
                 "mtime": os.path.getmtime(job_dir)
             })
