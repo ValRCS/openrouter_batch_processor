@@ -153,5 +153,78 @@ def progress(job_id):
     return jsonify({"processed": done, "total": total})
 
 
+@app.route("/jobs")
+def jobs_archive():
+    job_entries = []
+    if os.path.exists(app.config["UPLOAD_FOLDER"]):
+        for job_id in os.listdir(app.config["UPLOAD_FOLDER"]):
+            job_dir = os.path.join(app.config["UPLOAD_FOLDER"], job_id)
+            if not os.path.isdir(job_dir):
+                continue
+
+            meta = {}
+            meta_file = os.path.join(job_dir, "meta.json")
+            if os.path.exists(meta_file):
+                try:
+                    with open(meta_file) as f:
+                        meta = json.load(f)
+                except Exception:
+                    meta = {}
+
+            zips = [
+                f for f in os.listdir(job_dir)
+                if f.startswith("results_") and f.endswith(".zip")
+            ]
+            zip_filename = max(zips) if zips else None
+
+            status_text = "Unknown"
+            if job_id in jobs:
+                future = jobs[job_id]
+                if future.done():
+                    status_text = "Failed" if future.exception() else "Finished"
+                else:
+                    status_text = "Running"
+            else:
+                if meta.get("completed_at") or zip_filename:
+                    status_text = "Finished"
+                elif meta.get("submitted_at"):
+                    status_text = "Running"
+
+            source_route = meta.get("source_route")
+            if not source_route and meta.get("group_by_subfolder"):
+                source_route = "marc"
+            route_label = "marc" if source_route == "marc" else "main"
+
+            submitted_at = meta.get("submitted_at", "unknown")
+            submitted_at_dt = None
+            if submitted_at != "unknown":
+                try:
+                    submitted_at_dt = datetime.strptime(submitted_at, "%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    submitted_at_dt = None
+
+            job_entries.append({
+                "job_id": job_id,
+                "submitted_at": submitted_at,
+                "submitted_at_dt": submitted_at_dt,
+                "model": meta.get("model", "unknown"),
+                "status": status_text,
+                "route": route_label,
+                "zip_filename": zip_filename,
+                "elapsed_time": meta.get("elapsed_time", ""),
+                "download_url": url_for("download", job_id=job_id)
+                if zip_filename and status_text == "Finished"
+                else None,
+                "mtime": os.path.getmtime(job_dir)
+            })
+
+    job_entries.sort(
+        key=lambda row: row["submitted_at_dt"] or datetime.fromtimestamp(row["mtime"]),
+        reverse=True
+    )
+
+    return render_template("jobs.html", jobs=job_entries)
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=9513, debug=True)

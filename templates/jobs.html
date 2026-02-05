@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+  <head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
+  </head>
+  <body>
+    <div class="container">
+      <h1>Jobs Archive</h1>
+      <table class="jobs-table">
+        <thead>
+          <tr>
+            <th>Job ID</th>
+            <th>Submitted At</th>
+            <th>Model</th>
+            <th>Status</th>
+            <th>Route</th>
+            <th>Filename</th>
+            <th>Elapsed Time</th>
+            <th>Download</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in jobs %}
+            <tr>
+              <td>{{ job.job_id }}</td>
+              <td>{{ job.submitted_at }}</td>
+              <td>{{ job.model }}</td>
+              <td>{{ job.status }}</td>
+              <td>{{ job.route }}</td>
+              <td>{{ job.zip_filename or "-" }}</td>
+              <td>{{ job.elapsed_time or "-" }}</td>
+              <td>
+                {% if job.download_url %}
+                  <a href="{{ job.download_url }}">Download</a>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p><a href="{{ url_for('index') }}">Back to home</a></p>
+      <p><a href="{{ url_for('marc') }}">Back to MARC</a></p>
+    </div>
+  </body>
+</html>
