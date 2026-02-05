@@ -103,8 +103,8 @@ def _write_meta(job_dir, meta):
     meta_for_disk.pop("api_key", None)
     meta_for_disk["api_key_last8"] = api_key[-8:] if api_key else ""
     meta_file = os.path.join(job_dir, "meta.json")
-    with open(meta_file, "w") as f:
-        json.dump(meta_for_disk, f, indent=2)
+    with open(meta_file, "w", encoding="utf-8") as f:
+        json.dump(meta_for_disk, f, indent=2, ensure_ascii=False)
     return meta_file
 
 def _output_filename(group_id, is_folder):
