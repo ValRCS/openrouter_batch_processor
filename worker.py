@@ -224,7 +224,7 @@ def process_job(job_id, meta):
         else:
             zf.write(output_path, arcname="output.csv")
             zf.write(input_csv_path, arcname="input.csv")   # <-- include in zip
-            if os.path.exists(meta_file):
+            if include_metadata and os.path.exists(meta_file):
                 zf.write(meta_file, arcname="meta.json")
         # Only include inputs if requested
         if meta.get("include_inputs", False):
