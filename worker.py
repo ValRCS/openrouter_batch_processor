@@ -100,7 +100,8 @@ def _build_user_content(file_paths, input_dir, label_files):
 def _write_meta(job_dir, meta):
     meta_for_disk = dict(meta)
     api_key = meta_for_disk.get("api_key", "")
-    meta_for_disk["api_key"] = api_key[-8:] if api_key else ""
+    meta_for_disk.pop("api_key", None)
+    meta_for_disk["api_key_last8"] = api_key[-8:] if api_key else ""
     meta_file = os.path.join(job_dir, "meta.json")
     with open(meta_file, "w") as f:
         json.dump(meta_for_disk, f, indent=2)

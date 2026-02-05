@@ -48,7 +48,8 @@ def handle_submission(template_name, group_by_subfolder=False, source_route="ind
         }
 
         meta_for_disk = dict(meta)
-        meta_for_disk["api_key"] = api_key[-8:] if api_key else ""
+        meta_for_disk.pop("api_key", None)
+        meta_for_disk["api_key_last8"] = api_key[-8:] if api_key else ""
         with open(os.path.join(job_dir, "meta.json"), "w") as f:
             json.dump(meta_for_disk, f, indent=2)
 
