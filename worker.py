@@ -97,6 +97,14 @@ def _build_user_content(file_paths, input_dir, label_files):
 
     return user_content, supported
 
+def _output_filename(group_id, is_folder):
+    normalized = group_id.rstrip("/")
+    base = os.path.basename(normalized) if normalized else "output"
+    if is_folder:
+        return f"{base}_folder_output.txt"
+    stem, _ = os.path.splitext(base)
+    return f"{stem}_output.txt"
+
 def process_job(job_id, meta):
     job_dir = os.path.join(UPLOAD_FOLDER, job_id)
     input_dir = os.path.join(job_dir, "input")
@@ -112,10 +120,12 @@ def process_job(job_id, meta):
     api_key = meta["api_key"]
     model = meta.get("model", "google/gemini-2.5-flash")
     group_by_subfolder = meta.get("group_by_subfolder", False)
+    separate_outputs = meta.get("separate_outputs", False)
 
     # for progress tracking
     groups = _build_groups(input_dir, group_by_subfolder)
     total = len(groups)
+    group_is_folder = {group["id"]: group["is_folder"] for group in groups}
     meta["total_files"] = total
     meta["processed_files"] = 0
 
@@ -173,6 +183,19 @@ def process_job(job_id, meta):
     df_input = pd.DataFrame(input_rows).sort_values(by="full_path")
     df_input.to_csv(input_csv_path, index=False)   # <-- save input.csv
 
+    output_text_files = []
+    if separate_outputs:
+        output_text_dir = os.path.join(job_dir, "output_texts")
+        os.makedirs(output_text_dir, exist_ok=True)
+        for row in rows:
+            group_id = row["file"]
+            is_folder = group_is_folder.get(group_id, False)
+            filename = _output_filename(group_id, is_folder)
+            fpath = os.path.join(output_text_dir, filename)
+            with open(fpath, "w", encoding="utf-8") as f:
+                f.write(row["output"])
+            output_text_files.append((fpath, filename))
+
     # Save completion timestamp & elapsed time
     completed_at = datetime.now()
     meta["completed_at"] = completed_at.strftime("%Y-%m-%d %H:%M:%S")
@@ -196,6 +219,9 @@ def process_job(job_id, meta):
         zf.write(input_csv_path, arcname="input.csv")   # <-- include in zip
         if os.path.exists(meta_file):
             zf.write(meta_file, arcname="meta.json")
+        if separate_outputs:
+            for fpath, filename in output_text_files:
+                zf.write(fpath, arcname=filename)
         # Only include inputs if requested
         if meta.get("include_inputs", False):
             for fpath in _list_files_sorted(input_dir):
