@@ -158,6 +158,22 @@ def progress(job_id):
 
 @app.route("/jobs")
 def jobs_archive():
+    sort_by = request.args.get("sort_by", "submitted_at")
+    sort_dir = request.args.get("sort_dir", "desc")
+
+    allowed_sort_fields = {
+        "submitted_at": "Submitted At",
+        "model": "Model",
+        "status": "Status",
+        "route": "Route",
+        "filename": "Filename",
+        "elapsed_time": "Elapsed Time"
+    }
+    if sort_by not in allowed_sort_fields:
+        sort_by = "submitted_at"
+    if sort_dir not in ["asc", "desc"]:
+        sort_dir = "desc"
+
     job_entries = []
     if os.path.exists(app.config["UPLOAD_FOLDER"]):
         for job_id in os.listdir(app.config["UPLOAD_FOLDER"]):
@@ -221,12 +237,58 @@ def jobs_archive():
                 "mtime": os.path.getmtime(job_dir)
             })
 
-    job_entries.sort(
-        key=lambda row: row["submitted_at_dt"] or datetime.fromtimestamp(row["mtime"]),
-        reverse=True
-    )
+    def parse_elapsed_seconds(value):
+        if not value:
+            return None
+        try:
+            days = 0
+            rest = value
+            if "day" in value:
+                parts = value.split(", ")
+                if len(parts) == 2:
+                    day_part, rest = parts
+                    days = int(day_part.split()[0])
+            time_parts = rest.split(":")
+            if len(time_parts) != 3:
+                return None
+            hours = int(time_parts[0])
+            minutes = int(time_parts[1])
+            seconds = float(time_parts[2])
+            return days * 86400 + hours * 3600 + minutes * 60 + seconds
+        except Exception:
+            return None
 
-    return render_template("jobs.html", jobs=job_entries)
+    def sort_key(row):
+        if sort_by == "submitted_at":
+            return row["submitted_at_dt"] or datetime.fromtimestamp(row["mtime"])
+        if sort_by == "model":
+            value = row["model"] or ""
+            return value if sort_dir == "desc" else (value or "~~~~")
+        if sort_by == "status":
+            value = row["status"] or ""
+            return value if sort_dir == "desc" else (value or "~~~~")
+        if sort_by == "route":
+            value = row["route"] or ""
+            return value if sort_dir == "desc" else (value or "~~~~")
+        if sort_by == "filename":
+            value = row["zip_filename"] or ""
+            return value if sort_dir == "desc" else (value or "~~~~")
+        if sort_by == "elapsed_time":
+            value = parse_elapsed_seconds(row["elapsed_time"])
+            if value is None:
+                return float("inf") if sort_dir == "asc" else float("-inf")
+            return value
+        return row["submitted_at_dt"] or datetime.fromtimestamp(row["mtime"])
+
+    job_entries.sort(key=sort_key, reverse=(sort_dir == "desc"))
+
+    return render_template(
+        "jobs.html",
+        jobs=job_entries,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        sort_fields=allowed_sort_fields
+    )
 
 
 if __name__ == "__main__":
