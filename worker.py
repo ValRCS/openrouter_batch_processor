@@ -121,6 +121,7 @@ def process_job(job_id, meta):
     model = meta.get("model", "google/gemini-2.5-flash")
     group_by_subfolder = meta.get("group_by_subfolder", False)
     separate_outputs = meta.get("separate_outputs", False)
+    include_metadata = meta.get("include_metadata", False)
 
     # for progress tracking
     groups = _build_groups(input_dir, group_by_subfolder)
@@ -215,13 +216,16 @@ def process_job(job_id, meta):
 
     # Create results.zip
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.write(output_path, arcname="output.csv")
-        zf.write(input_csv_path, arcname="input.csv")   # <-- include in zip
-        if os.path.exists(meta_file):
-            zf.write(meta_file, arcname="meta.json")
         if separate_outputs:
             for fpath, filename in output_text_files:
                 zf.write(fpath, arcname=filename)
+            if include_metadata and os.path.exists(meta_file):
+                zf.write(meta_file, arcname="meta.json")
+        else:
+            zf.write(output_path, arcname="output.csv")
+            zf.write(input_csv_path, arcname="input.csv")   # <-- include in zip
+            if os.path.exists(meta_file):
+                zf.write(meta_file, arcname="meta.json")
         # Only include inputs if requested
         if meta.get("include_inputs", False):
             for fpath in _list_files_sorted(input_dir):

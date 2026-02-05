@@ -33,6 +33,7 @@ def handle_submission(template_name, group_by_subfolder=False):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         include_inputs = "include_inputs" in request.form
         separate_outputs = "separate_outputs" in request.form
+        include_metadata = "include_metadata" in request.form
 
         meta = {
             "api_key": api_key,
@@ -41,7 +42,8 @@ def handle_submission(template_name, group_by_subfolder=False):
             "submitted_at": timestamp,
             "include_inputs": include_inputs,
             "group_by_subfolder": group_by_subfolder,
-            "separate_outputs": separate_outputs
+            "separate_outputs": separate_outputs,
+            "include_metadata": include_metadata
         }
 
         with open(os.path.join(job_dir, "meta.json"), "w") as f:
