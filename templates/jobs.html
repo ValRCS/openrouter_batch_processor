@@ -36,14 +36,14 @@
               <td>{{ job.elapsed_time or "-" }}</td>
               <td>
                 {% if job.input_download_url %}
-                  <a href="{{ job.input_download_url }}" title="Download input files">⬇ ZIP</a>
+                  <a href="{{ job.input_download_url }}" title="Download input files">⬇ Inputs Zip</a>
                 {% else %}
                   -
                 {% endif %}
               </td>
               <td>
                 {% if job.download_url %}
-                  <a href="{{ job.download_url }}" title="Download results">⬇ ZIP</a>
+                  <a href="{{ job.download_url }}" title="Download results">⬇ Outputs Zip</a>
                 {% else %}
                   -
                 {% endif %}
