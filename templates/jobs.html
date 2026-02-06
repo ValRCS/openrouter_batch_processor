@@ -4,7 +4,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
   </head>
   <body>
-    <div class="container">
+    <div class="container jobs-container">
       <h1>Jobs Archive</h1>
       {% macro sort_links(field) -%}
         <a class="sort-arrow{% if sort_by == field and sort_dir == 'asc' %} active{% endif %}" href="{{ url_for('jobs_archive', sort_by=field, sort_dir='asc') }}">▲</a>

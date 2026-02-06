@@ -22,6 +22,12 @@ body {
   flex-direction: column;
 }
 
+.jobs-container {
+  width: min(85vw, 1600px);
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
 h1 {
   margin-bottom: 20px;
   color: #333;
@@ -147,5 +153,11 @@ footer {
   .container {
     width: 90vw;
     padding: 24px;
+  }
+
+  .jobs-container {
+    width: 95vw;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }
