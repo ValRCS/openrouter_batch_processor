@@ -78,7 +78,7 @@ def handle_submission(template_name, group_by_subfolder=False, source_route="ind
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    return handle_submission("index.html", source_route="index")
+    return handle_submission("index.html", group_by_subfolder=True, source_route="index")
 
 @app.route("/marc", methods=["GET", "POST"])
 def marc():

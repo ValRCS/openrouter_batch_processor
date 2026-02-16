@@ -14,6 +14,9 @@
   const modelDropdown = document.querySelector('select[name="model_dropdown"]');
   const modelCustom = document.querySelector('input[name="model_custom"]');
   const apiKeyField = document.querySelector('input[name="api_key"]');
+  const includeInputsField = document.querySelector('input[name="include_inputs"]');
+  const includeMetadataField = document.querySelector('input[name="include_metadata"]');
+  const separateOutputsField = document.querySelector('input[name="separate_outputs"]');
 
   const storedPrompt = localStorage.getItem(key("system_prompt"));
   if (storedPrompt !== null && promptField) {
@@ -45,6 +48,21 @@
     }
   }
 
+  const storedIncludeInputs = localStorage.getItem(key("include_inputs"));
+  if (storedIncludeInputs !== null && includeInputsField) {
+    includeInputsField.checked = storedIncludeInputs === "true";
+  }
+
+  const storedIncludeMetadata = localStorage.getItem(key("include_metadata"));
+  if (storedIncludeMetadata !== null && includeMetadataField) {
+    includeMetadataField.checked = storedIncludeMetadata === "true";
+  }
+
+  const storedSeparateOutputs = localStorage.getItem(key("separate_outputs"));
+  if (storedSeparateOutputs !== null && separateOutputsField) {
+    separateOutputsField.checked = storedSeparateOutputs === "true";
+  }
+
   form.addEventListener("submit", () => {
     if (apiKeyField) {
       localStorage.setItem(key("api_key"), apiKeyField.value);
@@ -59,6 +77,18 @@
     const chosenModel = customValue || dropdownValue;
     if (chosenModel) {
       localStorage.setItem(key("model"), chosenModel);
+    }
+
+    if (includeInputsField) {
+      localStorage.setItem(key("include_inputs"), String(includeInputsField.checked));
+    }
+
+    if (includeMetadataField) {
+      localStorage.setItem(key("include_metadata"), String(includeMetadataField.checked));
+    }
+
+    if (separateOutputsField) {
+      localStorage.setItem(key("separate_outputs"), String(separateOutputsField.checked));
     }
   });
 })();
