@@ -22,8 +22,6 @@
   const existingZipButtons = Array.from(document.querySelectorAll("[data-existing-zip]"));
   const existingZipStatus = document.getElementById("existing-zip-status");
 
-  let assigningExistingZip = false;
-
   const updateZipRequired = () => {
     if (!zipField) {
       return;
@@ -97,11 +95,6 @@
     updateZipRequired();
 
     zipField.addEventListener("change", () => {
-      if (assigningExistingZip) {
-        updateZipRequired();
-        return;
-      }
-
       const hasUpload = zipField.files && zipField.files.length > 0;
       if (hasUpload) {
         existingZipField.value = "";
@@ -114,44 +107,17 @@
 
   if (existingZipButtons.length && zipField && existingZipField) {
     existingZipButtons.forEach((button) => {
-      button.addEventListener("click", async () => {
+      button.addEventListener("click", () => {
         const zipName = button.dataset.existingZip || "";
-        const zipUrl = button.dataset.zipUrl || "";
-        if (!zipName || !zipUrl) {
+        if (!zipName) {
           return;
         }
 
+        zipField.value = "";
         existingZipField.value = zipName;
         setActiveExistingZip(zipName);
         setExistingZipStatus(`Selected existing ZIP: ${zipName}`);
         updateZipRequired();
-
-        try {
-          const response = await fetch(zipUrl, { cache: "no-store" });
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-
-          const zipBlob = await response.blob();
-          if (typeof DataTransfer === "undefined") {
-            return;
-          }
-
-          assigningExistingZip = true;
-          const file = new File([zipBlob], zipName, {
-            type: "application/zip",
-            lastModified: Date.now()
-          });
-          const dt = new DataTransfer();
-          dt.items.add(file);
-          zipField.files = dt.files;
-          zipField.dispatchEvent(new Event("change", { bubbles: true }));
-        } catch (error) {
-          setExistingZipStatus(`Could not load ${zipName}.`, true);
-        } finally {
-          assigningExistingZip = false;
-          updateZipRequired();
-        }
       });
     });
   }

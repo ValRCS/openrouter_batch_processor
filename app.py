@@ -83,19 +83,19 @@ def handle_submission(template_name, group_by_subfolder=False, source_route="ind
         using_existing_zip = False
         existing_zip_path = None
         uploaded_filename = file.filename if file else ""
-        if uploaded_filename:
-            original_name = secure_filename(uploaded_filename)
-            if not original_name:
-                original_name = "upload.zip"
-            elif not original_name.lower().endswith(".zip"):
-                original_name = f"{original_name}.zip"
-        elif selected_existing_zip:
+        if selected_existing_zip:
             original_name, existing_zip_path = resolve_existing_zip(selected_existing_zip)
             if not existing_zip_path:
                 context = dict(template_context)
                 context["error"] = "Selected ZIP file was not found in data/zips."
                 return render_template(template_name, **context), 400
             using_existing_zip = True
+        elif uploaded_filename:
+            original_name = secure_filename(uploaded_filename)
+            if not original_name:
+                original_name = "upload.zip"
+            elif not original_name.lower().endswith(".zip"):
+                original_name = f"{original_name}.zip"
         else:
             context = dict(template_context)
             context["error"] = "Please upload a ZIP file or select one from data/zips."
@@ -286,15 +286,6 @@ def progress(job_id):
     total = meta.get("total_files", 0)
     done = meta.get("processed_files", 0)
     return jsonify({"processed": done, "total": total})
-
-@app.route("/existing-zips/<path:filename>")
-def existing_zip_file(filename):
-    safe_name, zip_path = resolve_existing_zip(filename)
-    if not zip_path:
-        return f"ZIP file {filename} not found", 404
-
-    return send_file(zip_path, as_attachment=False, download_name=safe_name, mimetype="application/zip")
-
 
 @app.route("/jobs")
 def jobs_archive():

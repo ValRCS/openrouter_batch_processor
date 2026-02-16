@@ -33,7 +33,6 @@
                     type="button"
                     class="existing-zip-button"
                     data-existing-zip="{{ zip_item.name }}"
-                    data-zip-url="{{ url_for('existing_zip_file', filename=zip_item.name) }}"
                   >
                     <span class="existing-zip-name">{{ zip_item.name }}</span>
                     <span class="existing-zip-meta">{{ zip_item.size_label }} | {{ zip_item.modified_at }}</span>
