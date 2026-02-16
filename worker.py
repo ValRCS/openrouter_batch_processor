@@ -113,7 +113,7 @@ def _output_filename(group_id, is_folder):
     if is_folder:
         return f"{base}_folder_output.txt"
     stem, _ = os.path.splitext(base)
-    return f"{stem}_output.txt"
+    return f"{stem}.txt"
 
 def process_job(job_id, meta):
     job_dir = os.path.join(UPLOAD_FOLDER, job_id)
