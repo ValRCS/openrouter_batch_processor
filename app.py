@@ -1,36 +1,109 @@
 from flask import Flask, request, render_template, redirect, url_for, send_file, jsonify
-import os, uuid, zipfile, json
+import os, uuid, zipfile, json, shutil
 from werkzeug.utils import secure_filename
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from config import UPLOAD_FOLDER
+from config import BASE_DIR, UPLOAD_FOLDER
 from worker import process_job
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["EXISTING_ZIPS_FOLDER"] = os.path.join(BASE_DIR, "data", "zips")
 
 executor = ThreadPoolExecutor(max_workers=4)
 jobs = {}
 metas = {}
 
-def handle_submission(template_name, group_by_subfolder=False, source_route="index"):
+def format_file_size(size_bytes):
+    units = ["B", "KB", "MB", "GB", "TB"]
+    value = float(size_bytes)
+    unit_idx = 0
+    while value >= 1024 and unit_idx < len(units) - 1:
+        value /= 1024
+        unit_idx += 1
+    if unit_idx == 0:
+        return f"{int(value)} {units[unit_idx]}"
+    return f"{value:.2f} {units[unit_idx]}"
+
+def resolve_existing_zip(zip_name):
+    candidate_name = os.path.basename((zip_name or "").strip())
+    if not candidate_name or not candidate_name.lower().endswith(".zip"):
+        return None, None
+
+    base_dir = os.path.abspath(app.config["EXISTING_ZIPS_FOLDER"])
+    zip_path = os.path.abspath(os.path.join(base_dir, candidate_name))
+    if os.path.commonpath([base_dir, zip_path]) != base_dir:
+        return None, None
+
+    if not os.path.isfile(zip_path):
+        return None, None
+
+    return candidate_name, zip_path
+
+def list_existing_zips():
+    zips_dir = app.config["EXISTING_ZIPS_FOLDER"]
+    if not os.path.isdir(zips_dir):
+        return []
+
+    entries = []
+    for filename in os.listdir(zips_dir):
+        if not filename.lower().endswith(".zip"):
+            continue
+
+        zip_path = os.path.join(zips_dir, filename)
+        if not os.path.isfile(zip_path):
+            continue
+
+        stat = os.stat(zip_path)
+        entries.append({
+            "name": filename,
+            "size_label": format_file_size(stat.st_size),
+            "modified_at": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            "modified_ts": stat.st_mtime
+        })
+
+    entries.sort(key=lambda row: row["modified_ts"], reverse=True)
+    for entry in entries:
+        entry.pop("modified_ts", None)
+
+    return entries
+
+def handle_submission(template_name, group_by_subfolder=False, source_route="index", template_context=None):
+    template_context = template_context or {}
+
     if request.method == "POST":
         api_key = request.form["api_key"]
         system_prompt = request.form["system_prompt"]
         model_custom = request.form.get("model_custom", "").strip()
         model_dropdown = request.form.get("model_dropdown", "google/gemini-3-flash-preview")
         model = model_custom if model_custom else model_dropdown
-        file = request.files["zipfile"]
+        file = request.files.get("zipfile")
+        selected_existing_zip = request.form.get("existing_zip", "").strip()
+
+        using_existing_zip = False
+        existing_zip_path = None
+        uploaded_filename = file.filename if file else ""
+        if uploaded_filename:
+            original_name = secure_filename(uploaded_filename)
+            if not original_name:
+                original_name = "upload.zip"
+            elif not original_name.lower().endswith(".zip"):
+                original_name = f"{original_name}.zip"
+        elif selected_existing_zip:
+            original_name, existing_zip_path = resolve_existing_zip(selected_existing_zip)
+            if not existing_zip_path:
+                context = dict(template_context)
+                context["error"] = "Selected ZIP file was not found in data/zips."
+                return render_template(template_name, **context), 400
+            using_existing_zip = True
+        else:
+            context = dict(template_context)
+            context["error"] = "Please upload a ZIP file or select one from data/zips."
+            return render_template(template_name, **context), 400
 
         job_id = str(uuid.uuid4())
         job_dir = os.path.join(app.config["UPLOAD_FOLDER"], job_id)
         os.makedirs(job_dir, exist_ok=True)
-
-        original_name = secure_filename(file.filename or "")
-        if not original_name:
-            original_name = "upload.zip"
-        elif not original_name.lower().endswith(".zip"):
-            original_name = f"{original_name}.zip"
 
         input_zip_name = "input.zip"
         if source_route == "marc":
@@ -40,7 +113,10 @@ def handle_submission(template_name, group_by_subfolder=False, source_route="ind
                 input_zip_name = f"inputs_{original_name}"
 
         zip_path = os.path.join(job_dir, input_zip_name)
-        file.save(zip_path)
+        if using_existing_zip:
+            shutil.copy2(existing_zip_path, zip_path)
+        else:
+            file.save(zip_path)
         with zipfile.ZipFile(zip_path, "r") as zf:
             zf.extractall(os.path.join(job_dir, "input"))
 
@@ -59,6 +135,7 @@ def handle_submission(template_name, group_by_subfolder=False, source_route="ind
             "separate_outputs": separate_outputs,
             "include_metadata": include_metadata,
             "input_zip_name": input_zip_name,
+            "input_source": "existing" if using_existing_zip else "uploaded",
             "source_route": source_route
         }
 
@@ -74,11 +151,16 @@ def handle_submission(template_name, group_by_subfolder=False, source_route="ind
 
         return redirect(url_for("status", job_id=job_id))
 
-    return render_template(template_name)
+    return render_template(template_name, **template_context)
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    return handle_submission("index.html", group_by_subfolder=True, source_route="index")
+    return handle_submission(
+        "index.html",
+        group_by_subfolder=True,
+        source_route="index",
+        template_context={"existing_zips": list_existing_zips()}
+    )
 
 @app.route("/marc", methods=["GET", "POST"])
 def marc():
@@ -204,6 +286,14 @@ def progress(job_id):
     total = meta.get("total_files", 0)
     done = meta.get("processed_files", 0)
     return jsonify({"processed": done, "total": total})
+
+@app.route("/existing-zips/<path:filename>")
+def existing_zip_file(filename):
+    safe_name, zip_path = resolve_existing_zip(filename)
+    if not zip_path:
+        return f"ZIP file {filename} not found", 404
+
+    return send_file(zip_path, as_attachment=False, download_name=safe_name, mimetype="application/zip")
 
 
 @app.route("/jobs")

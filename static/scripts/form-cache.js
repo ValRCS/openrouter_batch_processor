@@ -17,6 +17,36 @@
   const includeInputsField = document.querySelector('input[name="include_inputs"]');
   const includeMetadataField = document.querySelector('input[name="include_metadata"]');
   const separateOutputsField = document.querySelector('input[name="separate_outputs"]');
+  const zipField = document.querySelector('input[name="zipfile"]');
+  const existingZipField = document.querySelector('input[name="existing_zip"]');
+  const existingZipButtons = Array.from(document.querySelectorAll("[data-existing-zip]"));
+  const existingZipStatus = document.getElementById("existing-zip-status");
+
+  let assigningExistingZip = false;
+
+  const updateZipRequired = () => {
+    if (!zipField) {
+      return;
+    }
+    const hasUpload = zipField.files && zipField.files.length > 0;
+    const hasExisting = existingZipField && existingZipField.value.trim() !== "";
+    zipField.required = !(hasUpload || hasExisting);
+  };
+
+  const setExistingZipStatus = (message, isError = false) => {
+    if (!existingZipStatus) {
+      return;
+    }
+    existingZipStatus.textContent = message;
+    existingZipStatus.classList.toggle("error", isError);
+  };
+
+  const setActiveExistingZip = (zipName) => {
+    existingZipButtons.forEach((button) => {
+      const isActive = zipName && button.dataset.existingZip === zipName;
+      button.classList.toggle("active", Boolean(isActive));
+    });
+  };
 
   const storedPrompt = localStorage.getItem(key("system_prompt"));
   if (storedPrompt !== null && promptField) {
@@ -61,6 +91,69 @@
   const storedSeparateOutputs = localStorage.getItem(key("separate_outputs"));
   if (storedSeparateOutputs !== null && separateOutputsField) {
     separateOutputsField.checked = storedSeparateOutputs === "true";
+  }
+
+  if (zipField && existingZipField) {
+    updateZipRequired();
+
+    zipField.addEventListener("change", () => {
+      if (assigningExistingZip) {
+        updateZipRequired();
+        return;
+      }
+
+      const hasUpload = zipField.files && zipField.files.length > 0;
+      if (hasUpload) {
+        existingZipField.value = "";
+        setActiveExistingZip("");
+        setExistingZipStatus("");
+      }
+      updateZipRequired();
+    });
+  }
+
+  if (existingZipButtons.length && zipField && existingZipField) {
+    existingZipButtons.forEach((button) => {
+      button.addEventListener("click", async () => {
+        const zipName = button.dataset.existingZip || "";
+        const zipUrl = button.dataset.zipUrl || "";
+        if (!zipName || !zipUrl) {
+          return;
+        }
+
+        existingZipField.value = zipName;
+        setActiveExistingZip(zipName);
+        setExistingZipStatus(`Selected existing ZIP: ${zipName}`);
+        updateZipRequired();
+
+        try {
+          const response = await fetch(zipUrl, { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const zipBlob = await response.blob();
+          if (typeof DataTransfer === "undefined") {
+            return;
+          }
+
+          assigningExistingZip = true;
+          const file = new File([zipBlob], zipName, {
+            type: "application/zip",
+            lastModified: Date.now()
+          });
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          zipField.files = dt.files;
+          zipField.dispatchEvent(new Event("change", { bubbles: true }));
+        } catch (error) {
+          setExistingZipStatus(`Could not load ${zipName}.`, true);
+        } finally {
+          assigningExistingZip = false;
+          updateZipRequired();
+        }
+      });
+    });
   }
 
   form.addEventListener("submit", () => {
