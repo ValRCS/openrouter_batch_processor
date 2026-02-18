@@ -9,6 +9,7 @@ from worker import process_job
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["EXISTING_ZIPS_FOLDER"] = os.path.join(BASE_DIR, "data", "zips")
+app.config["MARC_EXISTING_ZIPS_FOLDER"] = "/mnt/mi_rek"
 
 executor = ThreadPoolExecutor(max_workers=4)
 jobs = {}
@@ -25,12 +26,12 @@ def format_file_size(size_bytes):
         return f"{int(value)} {units[unit_idx]}"
     return f"{value:.2f} {units[unit_idx]}"
 
-def resolve_existing_zip(zip_name):
+def resolve_existing_zip(zip_name, zips_folder):
     candidate_name = os.path.basename((zip_name or "").strip())
     if not candidate_name or not candidate_name.lower().endswith(".zip"):
         return None, None
 
-    base_dir = os.path.abspath(app.config["EXISTING_ZIPS_FOLDER"])
+    base_dir = os.path.abspath(zips_folder)
     zip_path = os.path.abspath(os.path.join(base_dir, candidate_name))
     if os.path.commonpath([base_dir, zip_path]) != base_dir:
         return None, None
@@ -40,8 +41,7 @@ def resolve_existing_zip(zip_name):
 
     return candidate_name, zip_path
 
-def list_existing_zips():
-    zips_dir = app.config["EXISTING_ZIPS_FOLDER"]
+def list_existing_zips(zips_dir):
     if not os.path.isdir(zips_dir):
         return []
 
@@ -68,8 +68,19 @@ def list_existing_zips():
 
     return entries
 
-def handle_submission(template_name, group_by_subfolder=False, source_route="index", template_context=None):
+def handle_submission(
+    template_name,
+    group_by_subfolder=False,
+    source_route="index",
+    template_context=None,
+    existing_zips_folder=None,
+    existing_zips_label=None
+):
     template_context = template_context or {}
+    if existing_zips_folder is None:
+        existing_zips_folder = app.config["EXISTING_ZIPS_FOLDER"]
+    if existing_zips_label is None:
+        existing_zips_label = "data/zips"
 
     if request.method == "POST":
         api_key = request.form["api_key"]
@@ -84,10 +95,10 @@ def handle_submission(template_name, group_by_subfolder=False, source_route="ind
         existing_zip_path = None
         uploaded_filename = file.filename if file else ""
         if selected_existing_zip:
-            original_name, existing_zip_path = resolve_existing_zip(selected_existing_zip)
+            original_name, existing_zip_path = resolve_existing_zip(selected_existing_zip, existing_zips_folder)
             if not existing_zip_path:
                 context = dict(template_context)
-                context["error"] = "Selected ZIP file was not found in data/zips."
+                context["error"] = f"Selected ZIP file was not found in {existing_zips_label}."
                 return render_template(template_name, **context), 400
             using_existing_zip = True
         elif uploaded_filename:
@@ -98,7 +109,7 @@ def handle_submission(template_name, group_by_subfolder=False, source_route="ind
                 original_name = f"{original_name}.zip"
         else:
             context = dict(template_context)
-            context["error"] = "Please upload a ZIP file or select one from data/zips."
+            context["error"] = f"Please upload a ZIP file or select one from {existing_zips_label}."
             return render_template(template_name, **context), 400
 
         job_id = str(uuid.uuid4())
@@ -155,16 +166,33 @@ def handle_submission(template_name, group_by_subfolder=False, source_route="ind
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    existing_zips_folder = app.config["EXISTING_ZIPS_FOLDER"]
     return handle_submission(
         "index.html",
         group_by_subfolder=True,
         source_route="index",
-        template_context={"existing_zips": list_existing_zips()}
+        template_context={
+            "existing_zips": list_existing_zips(existing_zips_folder),
+            "existing_zips_label": "data/zips"
+        },
+        existing_zips_folder=existing_zips_folder,
+        existing_zips_label="data/zips"
     )
 
 @app.route("/marc", methods=["GET", "POST"])
 def marc():
-    return handle_submission("marc.html", group_by_subfolder=True, source_route="marc")
+    existing_zips_folder = app.config["MARC_EXISTING_ZIPS_FOLDER"]
+    return handle_submission(
+        "marc.html",
+        group_by_subfolder=True,
+        source_route="marc",
+        template_context={
+            "existing_zips": list_existing_zips(existing_zips_folder),
+            "existing_zips_label": existing_zips_folder
+        },
+        existing_zips_folder=existing_zips_folder,
+        existing_zips_label=existing_zips_folder
+    )
 
 @app.route("/status/<job_id>")
 def status(job_id):

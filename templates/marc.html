@@ -23,6 +23,31 @@
 
         <label>Upload ZIP:</label>
         <input type="file" name="zipfile" required>
+        <input type="hidden" name="existing_zip" value="">
+
+        <div class="existing-zips">
+          <p class="existing-zips-title">Or choose an existing ZIP from <code>{{ existing_zips_label }}</code>:</p>
+          {% if existing_zips %}
+            <ul class="existing-zips-list">
+              {% for zip_item in existing_zips %}
+                <li>
+                  <button
+                    type="button"
+                    class="existing-zip-button"
+                    data-existing-zip="{{ zip_item.name }}"
+                  >
+                    <span class="existing-zip-name">{{ zip_item.name }}</span>
+                    <span class="existing-zip-meta">{{ zip_item.size_label }} | {{ zip_item.modified_at }}</span>
+                  </button>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="existing-zips-empty">No ZIP files found in <code>{{ existing_zips_label }}</code>.</p>
+          {% endif %}
+          <p id="existing-zip-status" class="existing-zip-status" aria-live="polite"></p>
+        </div>
+
         <label>
           <input type="checkbox" name="include_inputs" value="true">
           Include inputs in output zip
@@ -35,6 +60,9 @@
           <input type="checkbox" name="include_metadata" value="true">
           Include metadata.json
         </label>
+        {% if error %}
+          <p class="error">{{ error }}</p>
+        {% endif %}
 
         <input type="submit" value="Submit Job">
       </form>
