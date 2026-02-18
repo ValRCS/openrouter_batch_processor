@@ -10,6 +10,7 @@ app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["EXISTING_ZIPS_FOLDER"] = os.path.join(BASE_DIR, "data", "zips")
 app.config["MARC_EXISTING_ZIPS_FOLDER"] = "/mnt/mi_rek"
+app.config["MARC_EXISTING_FOLDERS_ROOT"] = "/mnt/mi_rek"
 
 executor = ThreadPoolExecutor(max_workers=4)
 jobs = {}
@@ -68,19 +69,84 @@ def list_existing_zips(zips_dir):
 
     return entries
 
+def resolve_existing_folder(folder_name, folders_root):
+    candidate_name = os.path.basename((folder_name or "").strip())
+    if not candidate_name:
+        return None, None
+
+    base_dir = os.path.abspath(folders_root)
+    folder_path = os.path.abspath(os.path.join(base_dir, candidate_name))
+    if os.path.commonpath([base_dir, folder_path]) != base_dir:
+        return None, None
+
+    if not os.path.isdir(folder_path):
+        return None, None
+
+    return candidate_name, folder_path
+
+def list_existing_folders(folders_root):
+    if not os.path.isdir(folders_root):
+        return []
+
+    entries = []
+    for name in os.listdir(folders_root):
+        folder_path = os.path.join(folders_root, name)
+        if not os.path.isdir(folder_path):
+            continue
+
+        stat = os.stat(folder_path)
+        child_count = len(os.listdir(folder_path))
+        entries.append({
+            "name": name,
+            "items_label": f"{child_count} item{'s' if child_count != 1 else ''}",
+            "modified_at": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            "modified_ts": stat.st_mtime
+        })
+
+    entries.sort(key=lambda row: row["modified_ts"], reverse=True)
+    for entry in entries:
+        entry.pop("modified_ts", None)
+
+    return entries
+
+def copy_directory_contents(source_dir, target_dir):
+    os.makedirs(target_dir, exist_ok=True)
+    for entry in os.listdir(source_dir):
+        source_path = os.path.join(source_dir, entry)
+        target_path = os.path.join(target_dir, entry)
+        if os.path.isdir(source_path):
+            shutil.copytree(source_path, target_path)
+        elif os.path.isfile(source_path):
+            shutil.copy2(source_path, target_path)
+
+def write_zip_from_directory_contents(source_dir, zip_path):
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, _, filenames in os.walk(source_dir):
+            for filename in filenames:
+                file_path = os.path.join(root, filename)
+                arcname = os.path.relpath(file_path, source_dir)
+                zf.write(file_path, arcname=arcname)
+
 def handle_submission(
     template_name,
     group_by_subfolder=False,
     source_route="index",
     template_context=None,
     existing_zips_folder=None,
-    existing_zips_label=None
+    existing_zips_label=None,
+    allow_existing_folders=False,
+    existing_folders_root=None,
+    existing_folders_label=None
 ):
     template_context = template_context or {}
     if existing_zips_folder is None:
         existing_zips_folder = app.config["EXISTING_ZIPS_FOLDER"]
     if existing_zips_label is None:
         existing_zips_label = "data/zips"
+    if existing_folders_root is None:
+        existing_folders_root = app.config["MARC_EXISTING_FOLDERS_ROOT"]
+    if existing_folders_label is None:
+        existing_folders_label = existing_folders_root
 
     if request.method == "POST":
         api_key = request.form["api_key"]
@@ -90,11 +156,21 @@ def handle_submission(
         model = model_custom if model_custom else model_dropdown
         file = request.files.get("zipfile")
         selected_existing_zip = request.form.get("existing_zip", "").strip()
+        selected_existing_folder = request.form.get("existing_folder", "").strip()
 
         using_existing_zip = False
         existing_zip_path = None
+        using_existing_folder = False
+        existing_folder_path = None
         uploaded_filename = file.filename if file else ""
-        if selected_existing_zip:
+        if allow_existing_folders and selected_existing_folder:
+            selected_folder_name, existing_folder_path = resolve_existing_folder(selected_existing_folder, existing_folders_root)
+            if not existing_folder_path:
+                context = dict(template_context)
+                context["error"] = f"Selected folder was not found in {existing_folders_label}."
+                return render_template(template_name, **context), 400
+            using_existing_folder = True
+        elif selected_existing_zip:
             original_name, existing_zip_path = resolve_existing_zip(selected_existing_zip, existing_zips_folder)
             if not existing_zip_path:
                 context = dict(template_context)
@@ -109,7 +185,10 @@ def handle_submission(
                 original_name = f"{original_name}.zip"
         else:
             context = dict(template_context)
-            context["error"] = f"Please upload a ZIP file or select one from {existing_zips_label}."
+            if allow_existing_folders:
+                context["error"] = f"Please upload a ZIP file or select a folder from {existing_folders_label}."
+            else:
+                context["error"] = f"Please upload a ZIP file or select one from {existing_zips_label}."
             return render_template(template_name, **context), 400
 
         job_id = str(uuid.uuid4())
@@ -118,18 +197,27 @@ def handle_submission(
 
         input_zip_name = "input.zip"
         if source_route == "marc":
-            if original_name.lower().startswith("inputs_"):
+            if using_existing_folder:
+                folder_stem = secure_filename(selected_folder_name) or "folder"
+                input_zip_name = f"inputs_{folder_stem}.zip"
+            elif original_name.lower().startswith("inputs_"):
                 input_zip_name = original_name
             else:
                 input_zip_name = f"inputs_{original_name}"
 
         zip_path = os.path.join(job_dir, input_zip_name)
-        if using_existing_zip:
+        input_dir = os.path.join(job_dir, "input")
+        if using_existing_folder:
+            copy_directory_contents(existing_folder_path, input_dir)
+            write_zip_from_directory_contents(input_dir, zip_path)
+        elif using_existing_zip:
             shutil.copy2(existing_zip_path, zip_path)
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                zf.extractall(input_dir)
         else:
             file.save(zip_path)
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(os.path.join(job_dir, "input"))
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                zf.extractall(input_dir)
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         include_inputs = "include_inputs" in request.form
@@ -146,7 +234,8 @@ def handle_submission(
             "separate_outputs": separate_outputs,
             "include_metadata": include_metadata,
             "input_zip_name": input_zip_name,
-            "input_source": "existing" if using_existing_zip else "uploaded",
+            "input_source": "folder" if using_existing_folder else ("existing" if using_existing_zip else "uploaded"),
+            "input_folder_name": selected_folder_name if using_existing_folder else "",
             "source_route": source_route
         }
 
@@ -182,16 +271,20 @@ def index():
 @app.route("/marc", methods=["GET", "POST"])
 def marc():
     existing_zips_folder = app.config["MARC_EXISTING_ZIPS_FOLDER"]
+    existing_folders_root = app.config["MARC_EXISTING_FOLDERS_ROOT"]
     return handle_submission(
         "marc.html",
         group_by_subfolder=True,
         source_route="marc",
         template_context={
-            "existing_zips": list_existing_zips(existing_zips_folder),
-            "existing_zips_label": existing_zips_folder
+            "existing_folders": list_existing_folders(existing_folders_root),
+            "existing_folders_label": existing_folders_root
         },
         existing_zips_folder=existing_zips_folder,
-        existing_zips_label=existing_zips_folder
+        existing_zips_label=existing_zips_folder,
+        allow_existing_folders=True,
+        existing_folders_root=existing_folders_root,
+        existing_folders_label=existing_folders_root
     )
 
 @app.route("/status/<job_id>")

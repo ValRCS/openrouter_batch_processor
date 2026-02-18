@@ -21,31 +21,31 @@
         <label>Or enter custom model ID:</label>
         <input type="text" name="model_custom" placeholder="e.g. openai/gpt-4.1-mini">
 
-        <label>Upload ZIP:</label>
+        <label>Upload ZIP (optional if choosing a folder below):</label>
         <input type="file" name="zipfile" required>
-        <input type="hidden" name="existing_zip" value="">
+        <input type="hidden" name="existing_folder" value="">
 
         <div class="existing-zips">
-          <p class="existing-zips-title">Or choose an existing ZIP from <code>{{ existing_zips_label }}</code>:</p>
-          {% if existing_zips %}
+          <p class="existing-zips-title">Or choose a subfolder from <code>{{ existing_folders_label }}</code>:</p>
+          {% if existing_folders %}
             <ul class="existing-zips-list">
-              {% for zip_item in existing_zips %}
+              {% for folder_item in existing_folders %}
                 <li>
                   <button
                     type="button"
                     class="existing-zip-button"
-                    data-existing-zip="{{ zip_item.name }}"
+                    data-existing-folder="{{ folder_item.name }}"
                   >
-                    <span class="existing-zip-name">{{ zip_item.name }}</span>
-                    <span class="existing-zip-meta">{{ zip_item.size_label }} | {{ zip_item.modified_at }}</span>
+                    <span class="existing-zip-name">{{ folder_item.name }}/</span>
+                    <span class="existing-zip-meta">{{ folder_item.items_label }} | {{ folder_item.modified_at }}</span>
                   </button>
                 </li>
               {% endfor %}
             </ul>
           {% else %}
-            <p class="existing-zips-empty">No ZIP files found in <code>{{ existing_zips_label }}</code>.</p>
+            <p class="existing-zips-empty">No folders found in <code>{{ existing_folders_label }}</code>.</p>
           {% endif %}
-          <p id="existing-zip-status" class="existing-zip-status" aria-live="polite"></p>
+          <p id="existing-folder-status" class="existing-zip-status" aria-live="polite"></p>
         </div>
 
         <label>

@@ -21,6 +21,9 @@
   const existingZipField = document.querySelector('input[name="existing_zip"]');
   const existingZipButtons = Array.from(document.querySelectorAll("[data-existing-zip]"));
   const existingZipStatus = document.getElementById("existing-zip-status");
+  const existingFolderField = document.querySelector('input[name="existing_folder"]');
+  const existingFolderButtons = Array.from(document.querySelectorAll("[data-existing-folder]"));
+  const existingFolderStatus = document.getElementById("existing-folder-status");
 
   const updateZipRequired = () => {
     if (!zipField) {
@@ -28,7 +31,8 @@
     }
     const hasUpload = zipField.files && zipField.files.length > 0;
     const hasExisting = existingZipField && existingZipField.value.trim() !== "";
-    zipField.required = !(hasUpload || hasExisting);
+    const hasFolder = existingFolderField && existingFolderField.value.trim() !== "";
+    zipField.required = !(hasUpload || hasExisting || hasFolder);
   };
 
   const setExistingZipStatus = (message, isError = false) => {
@@ -42,6 +46,21 @@
   const setActiveExistingZip = (zipName) => {
     existingZipButtons.forEach((button) => {
       const isActive = zipName && button.dataset.existingZip === zipName;
+      button.classList.toggle("active", Boolean(isActive));
+    });
+  };
+
+  const setExistingFolderStatus = (message, isError = false) => {
+    if (!existingFolderStatus) {
+      return;
+    }
+    existingFolderStatus.textContent = message;
+    existingFolderStatus.classList.toggle("error", isError);
+  };
+
+  const setActiveExistingFolder = (folderName) => {
+    existingFolderButtons.forEach((button) => {
+      const isActive = folderName && button.dataset.existingFolder === folderName;
       button.classList.toggle("active", Boolean(isActive));
     });
   };
@@ -91,15 +110,22 @@
     separateOutputsField.checked = storedSeparateOutputs === "true";
   }
 
-  if (zipField && existingZipField) {
+  if (zipField) {
     updateZipRequired();
 
     zipField.addEventListener("change", () => {
       const hasUpload = zipField.files && zipField.files.length > 0;
       if (hasUpload) {
-        existingZipField.value = "";
+        if (existingZipField) {
+          existingZipField.value = "";
+        }
         setActiveExistingZip("");
         setExistingZipStatus("");
+        if (existingFolderField) {
+          existingFolderField.value = "";
+        }
+        setActiveExistingFolder("");
+        setExistingFolderStatus("");
       }
       updateZipRequired();
     });
@@ -117,6 +143,33 @@
         existingZipField.value = zipName;
         setActiveExistingZip(zipName);
         setExistingZipStatus(`Selected existing ZIP: ${zipName}`);
+        if (existingFolderField) {
+          existingFolderField.value = "";
+        }
+        setActiveExistingFolder("");
+        setExistingFolderStatus("");
+        updateZipRequired();
+      });
+    });
+  }
+
+  if (existingFolderButtons.length && zipField && existingFolderField) {
+    existingFolderButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const folderName = button.dataset.existingFolder || "";
+        if (!folderName) {
+          return;
+        }
+
+        zipField.value = "";
+        existingFolderField.value = folderName;
+        setActiveExistingFolder(folderName);
+        setExistingFolderStatus(`Selected folder: ${folderName}/`);
+        if (existingZipField) {
+          existingZipField.value = "";
+        }
+        setActiveExistingZip("");
+        setExistingZipStatus("");
         updateZipRequired();
       });
     });
