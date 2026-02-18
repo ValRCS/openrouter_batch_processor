@@ -17,6 +17,7 @@
   const includeInputsField = document.querySelector('input[name="include_inputs"]');
   const includeMetadataField = document.querySelector('input[name="include_metadata"]');
   const separateOutputsField = document.querySelector('input[name="separate_outputs"]');
+  const saveConcatResultsField = document.querySelector('input[name="save_concat_results"]');
   const zipField = document.querySelector('input[name="zipfile"]');
   const existingZipField = document.querySelector('input[name="existing_zip"]');
   const existingZipButtons = Array.from(document.querySelectorAll("[data-existing-zip]"));
@@ -110,6 +111,11 @@
     separateOutputsField.checked = storedSeparateOutputs === "true";
   }
 
+  const storedSaveConcatResults = localStorage.getItem(key("save_concat_results"));
+  if (storedSaveConcatResults !== null && saveConcatResultsField) {
+    saveConcatResultsField.checked = storedSaveConcatResults === "true";
+  }
+
   if (zipField) {
     updateZipRequired();
 
@@ -201,6 +207,10 @@
 
     if (separateOutputsField) {
       localStorage.setItem(key("separate_outputs"), String(separateOutputsField.checked));
+    }
+
+    if (saveConcatResultsField) {
+      localStorage.setItem(key("save_concat_results"), String(saveConcatResultsField.checked));
     }
   });
 })();

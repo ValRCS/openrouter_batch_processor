@@ -60,6 +60,10 @@
           <input type="checkbox" name="include_metadata" value="true">
           Include metadata.json
         </label>
+        <label>
+          <input type="checkbox" name="save_concat_results" value="true" checked>
+          Save concatenated results to <code>/mnt/mi_rek/results</code>
+        </label>
         {% if error %}
           <p class="error">{{ error }}</p>
         {% endif %}

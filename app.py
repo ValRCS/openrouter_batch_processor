@@ -11,6 +11,7 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["EXISTING_ZIPS_FOLDER"] = os.path.join(BASE_DIR, "data", "zips")
 app.config["MARC_EXISTING_ZIPS_FOLDER"] = "/mnt/mi_rek"
 app.config["MARC_EXISTING_FOLDERS_ROOT"] = "/mnt/mi_rek"
+app.config["MARC_RESULTS_FOLDER"] = "/mnt/mi_rek/results"
 
 executor = ThreadPoolExecutor(max_workers=4)
 jobs = {}
@@ -223,6 +224,7 @@ def handle_submission(
         include_inputs = "include_inputs" in request.form
         separate_outputs = "separate_outputs" in request.form
         include_metadata = "include_metadata" in request.form
+        save_concat_results = "save_concat_results" in request.form
 
         meta = {
             "api_key": api_key,
@@ -233,6 +235,8 @@ def handle_submission(
             "group_by_subfolder": group_by_subfolder,
             "separate_outputs": separate_outputs,
             "include_metadata": include_metadata,
+            "save_concat_results": save_concat_results if source_route == "marc" else False,
+            "concat_results_dir": app.config["MARC_RESULTS_FOLDER"] if source_route == "marc" else "",
             "input_zip_name": input_zip_name,
             "input_source": "folder" if using_existing_folder else ("existing" if using_existing_zip else "uploaded"),
             "input_folder_name": selected_folder_name if using_existing_folder else "",

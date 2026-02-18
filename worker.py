@@ -115,6 +115,15 @@ def _output_filename(group_id, is_folder):
     stem, _ = os.path.splitext(base)
     return f"{stem}.txt"
 
+def _save_concatenated_results(rows, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+    filename = datetime.now().strftime("results_%Y%m%d_%H%M%S.txt")
+    output_path = os.path.join(output_dir, filename)
+    content = "\n".join(str(row.get("output", "")) for row in rows)
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return output_path
+
 def process_job(job_id, meta):
     job_dir = os.path.join(UPLOAD_FOLDER, job_id)
     input_dir = os.path.join(job_dir, "input")
@@ -185,6 +194,17 @@ def process_job(job_id, meta):
         _write_meta(job_dir, meta)
 
         time.sleep(0.2)
+
+    if meta.get("source_route") == "marc" and meta.get("save_concat_results", False):
+        concat_results_dir = meta.get("concat_results_dir", "")
+        if concat_results_dir:
+            try:
+                concat_path = _save_concatenated_results(rows, concat_results_dir)
+                meta["concatenated_results_saved"] = True
+                meta["concatenated_results_path"] = concat_path
+            except Exception as e:
+                meta["concatenated_results_saved"] = False
+                meta["concatenated_results_error"] = str(e)
 
     # Save CSV
     pd.DataFrame(rows).to_csv(output_path, index=False)
