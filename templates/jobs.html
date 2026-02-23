@@ -7,8 +7,8 @@
     <div class="container jobs-container">
       <h1>Jobs Archive</h1>
       {% macro sort_links(field) -%}
-        <a class="sort-arrow{% if sort_by == field and sort_dir == 'asc' %} active{% endif %}" href="{{ url_for('jobs_archive', sort_by=field, sort_dir='asc') }}">▲</a>
-        <a class="sort-arrow{% if sort_by == field and sort_dir == 'desc' %} active{% endif %}" href="{{ url_for('jobs_archive', sort_by=field, sort_dir='desc') }}">▼</a>
+        <a class="sort-arrow{% if sort_by == field and sort_dir == 'asc' %} active{% endif %}" href="{{ url_for('jobs_archive', sort_by=field, sort_dir='asc') }}">^</a>
+        <a class="sort-arrow{% if sort_by == field and sort_dir == 'desc' %} active{% endif %}" href="{{ url_for('jobs_archive', sort_by=field, sort_dir='desc') }}">v</a>
       {%- endmacro %}
       <table class="jobs-table">
         <thead>
@@ -36,14 +36,20 @@
               <td>{{ job.elapsed_time or "-" }}</td>
               <td>
                 {% if job.input_download_url %}
-                  <a href="{{ job.input_download_url }}" title="Download input files">⬇ Inputs Zip</a>
+                  <a href="{{ job.input_download_url }}" title="Download input files">Download Inputs Zip</a>
+                  {% if job.input_zip_name %}
+                    <div><code>{{ job.input_zip_name }}</code></div>
+                  {% endif %}
+                  {% if job.input_zip_hash %}
+                    <div><code>{{ job.input_zip_hash[:12] }}</code></div>
+                  {% endif %}
                 {% else %}
                   -
                 {% endif %}
               </td>
               <td>
                 {% if job.download_url %}
-                  <a href="{{ job.download_url }}" title="Download results">⬇ Outputs Zip</a>
+                  <a href="{{ job.download_url }}" title="Download results">Download Outputs Zip</a>
                 {% else %}
                   -
                 {% endif %}
