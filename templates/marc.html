@@ -13,6 +13,9 @@
         <input type="text" name="api_key" required>
 
         <label>System Prompt:</label>
+        <button type="button" id="load-marc-prompt" class="secondary-button">
+          Load from static/prompts/marc.txt
+        </button>
         <textarea name="system_prompt" rows="4" cols="50"></textarea>
 
         <label>Choose Model:</label>
@@ -72,6 +75,33 @@
       </form>
       <p><a href="{{ url_for('jobs_archive') }}">Jobs archive</a></p>
     </div>
+    <script>
+      (() => {
+        const loadPromptButton = document.getElementById("load-marc-prompt");
+        const promptField = document.querySelector('textarea[name="system_prompt"]');
+        if (!loadPromptButton || !promptField) {
+          return;
+        }
+
+        const promptUrl = "{{ url_for('static', filename='prompts/marc.txt') }}";
+        loadPromptButton.addEventListener("click", async () => {
+          loadPromptButton.disabled = true;
+          try {
+            const response = await fetch(promptUrl, { cache: "no-store" });
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            promptField.value = await response.text();
+            promptField.dispatchEvent(new Event("input", { bubbles: true }));
+          } catch (error) {
+            console.error("Failed to load MARC system prompt:", error);
+            alert("Failed to load prompt from static/prompts/marc.txt.");
+          } finally {
+            loadPromptButton.disabled = false;
+          }
+        });
+      })();
+    </script>
     <script src="{{ url_for('static', filename='scripts/form-cache.js') }}"></script>
   </body>
 </html>
