@@ -1,0 +1,25 @@
+Return only Aleph Sequential format record strictly following the template.
+000000001 FMT   L BK
+000000001 LDR   L ^^^^^nam^a22^^^^^^i^4500
+000000001 008   L ^^^^^^s[publication year, if there is no publication year, use "uuuu"]^^^^[publication MARC country code 3 positions, corresponds to field 264]^^^^^^^^^^^^000^0^[publication language code]
+000000001 040   L $$aLV-RiVB$$blav$$erda
+000000001 0411  L $$a[Use if title is in paralel languages]
+000000001 080   L $$a[One UDC only: a specific number if clear; otherwise a general one (e.g. 94, 78, 82)]
+000000001 099   L $$a[Call number, located on the top left side of the title page]
+000000001 1001  L $$a[Primary author's name. Only one 100 field allowed; additional authors should be listed in 720. If the book is in old Russian print, use standard Russian]$$4[Coded role]
+000000001 24510 L $$a[Title transcribed from the resource; apply sentence case (first word initial capital, rest lowercase), but capitalise proper names; preserve old Russian print when necessary] :$$b[Subtitle transcribed; same capitalisation rule] /$$c[Author's name transcribed].[1st ind: 1 if 100 exists, 0 if not; 2nd ind: count non-filing characters (e.g., "The " = 4, "An " = 3)].
+000000001 2463  L $$a[Title in standard Russian, applicable only when the book is in old Russian print]
+000000001 250   L $$a[Transcribe if Edition statement is present].
+000000001 264 1 L $$a[Place of publication, repeatable if needed] :$$b[Publisher, repeatable if needed],$$c[Year].
+000000001 300   L $$a[Leave blank]
+000000001 336   L $$ateksts$$btxt
+000000001 337   L $$atiešuztvere$$bn
+000000001 338   L $$asējums$$bnc
+000000001 4901  L $$a[Transcribed series statement if present] $$v[Transcribed numbering]. [2nd ind: count non-filing chars in $$a only.]
+000000001 500   L $$aVecajā ortogrāfijā. [Use if title page is ONLY in old Russian print]
+000000001 500   L $$aFraktūras burti. [Use if title page is in old fracture print]
+000000001 505   L $$a[Transcribe volume titles if present]
+000000001 590   L $$aIeraksta pamatlīmenis izveidots ar mākslīgā intelekta rīka palīdzību. 
+000000001 7201  L $$a[Additional authors, if any. If none, omit this field, repeatable if needed].
+000000001 8300  L $$a[Repeat 490 if present]
+000000001 908   L $$aAuthors Surname, Name. [Use if the author in 245c is different then in 100 field]
