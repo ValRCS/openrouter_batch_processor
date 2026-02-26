@@ -119,5 +119,79 @@
       })();
     </script>
     <script src="{{ url_for('static', filename='scripts/form-cache.js') }}"></script>
+    <script>
+      (() => {
+        const usernameField = document.querySelector('input[name="username"]');
+        const customFooterField = document.querySelector('textarea[name="customFooter"]');
+        if (!customFooterField) {
+          return;
+        }
+
+        const pathname = window.location.pathname || "";
+        const trimmedPath = pathname.replace(/\/+$/, "");
+        const appBase = trimmedPath.endsWith("/marc")
+          ? trimmedPath.slice(0, -"/marc".length)
+          : trimmedPath;
+        const footerTemplateUrl = `${appBase || ""}/static/config/marc_postfix.txt`;
+
+        const now = new Date();
+        const yyyy = String(now.getFullYear());
+        const pad2 = (value) => String(value).padStart(2, "0");
+        const yyyymmdd = `${yyyy}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}`;
+        let templateText = "";
+        let lastAutoValue = null;
+
+        const renderFooter = () => {
+          const username = usernameField ? usernameField.value.trim() : "";
+          return templateText
+            .replaceAll("{YYYY}", yyyy)
+            .replaceAll("{YYYYMMDD}", yyyymmdd)
+            .replaceAll("{username}", username);
+        };
+
+        const applyAutoFooter = () => {
+          if (!templateText) {
+            return;
+          }
+
+          const currentValue = customFooterField.value;
+          const isEmpty = currentValue.trim() === "";
+          const isCurrentAutoValue = lastAutoValue !== null && currentValue === lastAutoValue;
+          if (!isEmpty && !isCurrentAutoValue) {
+            return;
+          }
+
+          const generated = renderFooter();
+          customFooterField.value = generated;
+          lastAutoValue = generated;
+          customFooterField.dispatchEvent(new Event("input", { bubbles: true }));
+        };
+
+        if (usernameField) {
+          usernameField.addEventListener("input", () => {
+            applyAutoFooter();
+          });
+        }
+
+        fetch(footerTemplateUrl, { cache: "no-store" })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            return response.text();
+          })
+          .then((text) => {
+            templateText = text;
+            const currentValue = customFooterField.value;
+            if (currentValue !== "" && currentValue === renderFooter()) {
+              lastAutoValue = currentValue;
+            }
+            applyAutoFooter();
+          })
+          .catch((error) => {
+            console.error("Failed to load MARC footer template:", error);
+          });
+      })();
+    </script>
   </body>
 </html>
