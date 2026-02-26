@@ -83,7 +83,12 @@
           return;
         }
 
-        const promptUrl = "{{ url_for('static', filename='prompts/marc.txt') }}";
+        const pathname = window.location.pathname || "";
+        const trimmedPath = pathname.replace(/\/+$/, "");
+        const appBase = trimmedPath.endsWith("/marc")
+          ? trimmedPath.slice(0, -"/marc".length)
+          : trimmedPath;
+        const promptUrl = `${appBase || ""}/static/prompts/marc.txt`;
         loadPromptButton.addEventListener("click", async () => {
           loadPromptButton.disabled = true;
           try {
