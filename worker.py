@@ -124,6 +124,14 @@ def _save_concatenated_results(rows, output_dir):
         f.write(content)
     return output_path
 
+def _append_custom_footer(output_text, footer_text):
+    footer = str(footer_text or "")
+    if not footer.strip():
+        return output_text
+    base_text = "" if output_text is None else str(output_text)
+    separator = "" if not base_text or base_text.endswith(("\n", "\r")) else "\n"
+    return f"{base_text}{separator}{footer}"
+
 def process_job(job_id, meta):
     job_dir = os.path.join(UPLOAD_FOLDER, job_id)
     input_dir = os.path.join(job_dir, "input")
@@ -141,6 +149,7 @@ def process_job(job_id, meta):
     group_by_subfolder = meta.get("group_by_subfolder", False)
     separate_outputs = meta.get("separate_outputs", False)
     include_metadata = meta.get("include_metadata", False)
+    custom_footer = meta.get("custom_footer", "")
 
     # for progress tracking
     groups = _build_groups(input_dir, group_by_subfolder)
@@ -179,13 +188,18 @@ def process_job(job_id, meta):
 
             headers = {"Authorization": f"Bearer {meta['api_key']}"}
 
+            should_append_footer = False
             try:
                 r = requests.post(OPENROUTER_URL, json=payload, headers=headers, timeout=120)
                 r.raise_for_status()
                 data = r.json()
                 reply = data["choices"][0]["message"]["content"]
+                should_append_footer = True
             except Exception as e:
                 reply = f"ERROR: {e}"
+
+            if should_append_footer:
+                reply = _append_custom_footer(reply, custom_footer)
 
             rows.append({"file": group_id, "output": reply})
 

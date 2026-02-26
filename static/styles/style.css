@@ -57,6 +57,13 @@ textarea {
   flex: 1 1 auto;
 }
 
+textarea.compact-textarea {
+  min-height: 0;
+  height: 6em;
+  overflow-y: auto;
+  flex: 0 0 auto;
+}
+
 input[type="submit"] {
   margin-top: 20px;
   padding: 10px 20px;

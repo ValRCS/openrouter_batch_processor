@@ -21,6 +21,14 @@
         <label>Username:</label>
         <input type="text" name="username" placeholder="e.g. rek_user">
 
+        <label>Custom Footer:</label>
+        <textarea
+          name="customFooter"
+          class="compact-textarea"
+          rows="3"
+          placeholder="Optional text appended after each successful LLM response"
+        ></textarea>
+
         <label>Choose Model:</label>
         {% include "_model_dropdown.html" %}
 

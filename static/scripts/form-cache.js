@@ -12,6 +12,7 @@
 
   const promptField = document.querySelector('textarea[name="system_prompt"]');
   const usernameField = document.querySelector('input[name="username"]');
+  const customFooterField = document.querySelector('textarea[name="customFooter"]');
   const modelDropdown = document.querySelector('select[name="model_dropdown"]');
   const modelCustom = document.querySelector('input[name="model_custom"]');
   const apiKeyField = document.querySelector('input[name="api_key"]');
@@ -75,6 +76,11 @@
   const storedUsername = localStorage.getItem(key("username"));
   if (storedUsername !== null && usernameField) {
     usernameField.value = storedUsername;
+  }
+
+  const storedCustomFooter = localStorage.getItem(key("custom_footer"));
+  if (storedCustomFooter !== null && customFooterField) {
+    customFooterField.value = storedCustomFooter;
   }
 
   const storedApiKey = localStorage.getItem(key("api_key"));
@@ -198,6 +204,10 @@
 
     if (usernameField) {
       localStorage.setItem(key("username"), usernameField.value);
+    }
+
+    if (customFooterField) {
+      localStorage.setItem(key("custom_footer"), customFooterField.value);
     }
 
     const customValue = modelCustom ? modelCustom.value.trim() : "";
