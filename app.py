@@ -619,6 +619,7 @@ def handle_submission(
     if request.method == "POST":
         api_key = request.form["api_key"]
         system_prompt = request.form["system_prompt"]
+        username = request.form.get("username", "").strip()
         model_custom = request.form.get("model_custom", "").strip()
         model_dropdown = request.form.get("model_dropdown", "google/gemini-3-flash-preview")
         model = model_custom if model_custom else model_dropdown
@@ -680,6 +681,7 @@ def handle_submission(
         meta = {
             "api_key": api_key,
             "system_prompt": system_prompt,
+            "username": username if source_route == "marc" else "",
             "model": model,
             "submitted_at": timestamp,
             "include_inputs": include_inputs,

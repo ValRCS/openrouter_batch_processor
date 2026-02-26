@@ -11,6 +11,7 @@
   const key = (suffix) => `${scope}_${suffix}`;
 
   const promptField = document.querySelector('textarea[name="system_prompt"]');
+  const usernameField = document.querySelector('input[name="username"]');
   const modelDropdown = document.querySelector('select[name="model_dropdown"]');
   const modelCustom = document.querySelector('input[name="model_custom"]');
   const apiKeyField = document.querySelector('input[name="api_key"]');
@@ -69,6 +70,11 @@
   const storedPrompt = localStorage.getItem(key("system_prompt"));
   if (storedPrompt !== null && promptField) {
     promptField.value = storedPrompt;
+  }
+
+  const storedUsername = localStorage.getItem(key("username"));
+  if (storedUsername !== null && usernameField) {
+    usernameField.value = storedUsername;
   }
 
   const storedApiKey = localStorage.getItem(key("api_key"));
@@ -188,6 +194,10 @@
 
     if (promptField) {
       localStorage.setItem(key("system_prompt"), promptField.value);
+    }
+
+    if (usernameField) {
+      localStorage.setItem(key("username"), usernameField.value);
     }
 
     const customValue = modelCustom ? modelCustom.value.trim() : "";
