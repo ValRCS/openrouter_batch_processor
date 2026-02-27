@@ -1,7 +1,7 @@
 ﻿(() => {
   const STORAGE_KEY = "marc_ui_language";
   const SUPPORTED = ["en", "lv"];
-  const DEFAULT_LANGUAGE = "en";
+  const DEFAULT_LANGUAGE = "lv";
 
   const translations = {
     en: {
