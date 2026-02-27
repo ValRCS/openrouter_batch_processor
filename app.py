@@ -635,6 +635,9 @@ def handle_submission(
         model_custom = request.form.get("model_custom", "").strip()
         model_dropdown = request.form.get("model_dropdown", "google/gemini-3-flash-preview")
         model = model_custom if model_custom else model_dropdown
+        reasoning_mode = request.form.get("reasoning_mode", "off").strip().lower()
+        if reasoning_mode not in {"off", "true", "false"}:
+            reasoning_mode = "off"
         file = request.files.get("zipfile")
         selected_existing_zip = request.form.get("existing_zip", "").strip()
         selected_existing_folder = request.form.get("existing_folder", "").strip()
@@ -700,6 +703,7 @@ def handle_submission(
             "username": username if source_route == "marc" else "",
             "custom_footer": custom_footer if source_route == "marc" else "",
             "model": model,
+            "reasoning_mode": reasoning_mode,
             "submitted_at": timestamp,
             "include_inputs": include_inputs,
             "group_by_subfolder": group_by_subfolder,

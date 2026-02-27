@@ -187,6 +187,7 @@ def process_job(job_id, meta):
         if supported == 0:
             rows.append({"file": group_id, "output": "Unsupported file type"})
         else:
+            reasoning_mode = str(meta.get("reasoning_mode", "off")).strip().lower()
             payload = {
                 "model": meta.get("model", "google/gemini-2.5-flash"),
                 "messages": [
@@ -194,6 +195,8 @@ def process_job(job_id, meta):
                     {"role": "user", "content": user_content}
                 ]
             }
+            if reasoning_mode in {"true", "false"}:
+                payload["reasoning"] = {"enabled": reasoning_mode == "true"}
 
             headers = {"Authorization": f"Bearer {meta['api_key']}"}
 

@@ -19,6 +19,13 @@
         <label>Or enter custom model ID:</label>
         <input type="text" name="model_custom" placeholder="e.g. openai/gpt-4.1-mini">
 
+        <label>Reasoning:</label>
+        <select name="reasoning_mode">
+          <option value="off">OFF (do not send reasoning)</option>
+          <option value="true">True</option>
+          <option value="false" selected>False (default)</option>
+        </select>
+
         <label>Upload ZIP:</label>
         <input type="file" name="zipfile" required>
         <input type="hidden" name="existing_zip" value="">

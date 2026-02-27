@@ -14,6 +14,7 @@
   const usernameField = document.querySelector('input[name="username"]');
   const modelDropdown = document.querySelector('select[name="model_dropdown"]');
   const modelCustom = document.querySelector('input[name="model_custom"]');
+  const reasoningModeField = document.querySelector('select[name="reasoning_mode"]');
   const apiKeyField = document.querySelector('input[name="api_key"]');
   const includeInputsField = document.querySelector('input[name="include_inputs"]');
   const includeMetadataField = document.querySelector('input[name="include_metadata"]');
@@ -173,6 +174,16 @@
     }
   }
 
+  const storedReasoningMode = localStorage.getItem(key("reasoning_mode"));
+  if (storedReasoningMode !== null && reasoningModeField) {
+    const hasStoredReasoningOption = Array.from(reasoningModeField.options).some(
+      (option) => option.value === storedReasoningMode
+    );
+    if (hasStoredReasoningOption) {
+      reasoningModeField.value = storedReasoningMode;
+    }
+  }
+
   const storedIncludeInputs = localStorage.getItem(key("include_inputs"));
   if (storedIncludeInputs !== null && includeInputsField) {
     includeInputsField.checked = storedIncludeInputs === "true";
@@ -295,6 +306,10 @@
     const chosenModel = customValue || dropdownValue;
     if (chosenModel) {
       localStorage.setItem(key("model"), chosenModel);
+    }
+
+    if (reasoningModeField) {
+      localStorage.setItem(key("reasoning_mode"), reasoningModeField.value);
     }
 
     if (includeInputsField) {
