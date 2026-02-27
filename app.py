@@ -13,6 +13,7 @@ app.config["ZIP_REGISTRY_FILE"] = ZIP_REGISTRY_PATH
 app.config["MARC_EXISTING_ZIPS_FOLDER"] = "/mnt/mi_rek"
 app.config["MARC_EXISTING_FOLDERS_ROOT"] = "/mnt/mi_rek"
 app.config["MARC_RESULTS_FOLDER"] = "/mnt/mi_rek/results"
+app.config["MARC_HIDDEN_FOLDERS"] = {"results"}
 os.makedirs(app.config["EXISTING_ZIPS_FOLDER"], exist_ok=True)
 
 executor = ThreadPoolExecutor(max_workers=4)
@@ -467,9 +468,11 @@ def list_existing_zips(zips_dir):
 
     return entries
 
-def resolve_existing_folder(folder_name, folders_root):
+def resolve_existing_folder(folder_name, folders_root, excluded_names=None):
     candidate_name = os.path.basename((folder_name or "").strip())
     if not candidate_name:
+        return None, None
+    if excluded_names and candidate_name in excluded_names:
         return None, None
 
     base_dir = os.path.abspath(folders_root)
@@ -482,12 +485,15 @@ def resolve_existing_folder(folder_name, folders_root):
 
     return candidate_name, folder_path
 
-def list_existing_folders(folders_root):
+def list_existing_folders(folders_root, excluded_names=None):
     if not os.path.isdir(folders_root):
         return []
 
+    excluded = set(excluded_names or [])
     entries = []
     for name in os.listdir(folders_root):
+        if name in excluded:
+            continue
         folder_path = os.path.join(folders_root, name)
         if not os.path.isdir(folder_path):
             continue
@@ -522,7 +528,12 @@ def prepare_job_input(job_id, meta):
     if input_source == "folder":
         folder_name = meta.get("input_folder_name", "")
         folder_root = meta.get("input_folder_root", app.config["MARC_EXISTING_FOLDERS_ROOT"])
-        resolved_name, folder_path = resolve_existing_folder(folder_name, folder_root)
+        excluded_folders = app.config["MARC_HIDDEN_FOLDERS"] if source_route == "marc" else None
+        resolved_name, folder_path = resolve_existing_folder(
+            folder_name,
+            folder_root,
+            excluded_names=excluded_folders
+        )
         if not folder_path:
             raise ValueError(f"Selected folder was not found in {folder_root}.")
 
@@ -635,7 +646,11 @@ def handle_submission(
         staged_upload_name = ""
         uploaded_filename = file.filename if file else ""
         if allow_existing_folders and selected_existing_folder:
-            selected_folder_name, existing_folder_path = resolve_existing_folder(selected_existing_folder, existing_folders_root)
+            selected_folder_name, existing_folder_path = resolve_existing_folder(
+                selected_existing_folder,
+                existing_folders_root,
+                excluded_names=app.config["MARC_HIDDEN_FOLDERS"] if source_route == "marc" else None
+            )
             if not existing_folder_path:
                 context = dict(template_context)
                 context["error"] = f"Selected folder was not found in {existing_folders_label}."
@@ -735,12 +750,13 @@ def index():
 def marc():
     existing_zips_folder = app.config["EXISTING_ZIPS_FOLDER"]
     existing_folders_root = app.config["MARC_EXISTING_FOLDERS_ROOT"]
+    hidden_folders = app.config["MARC_HIDDEN_FOLDERS"]
     return handle_submission(
         "marc.html",
         group_by_subfolder=True,
         source_route="marc",
         template_context={
-            "existing_folders": list_existing_folders(existing_folders_root),
+            "existing_folders": list_existing_folders(existing_folders_root, excluded_names=hidden_folders),
             "existing_folders_label": existing_folders_root
         },
         existing_zips_folder=existing_zips_folder,
