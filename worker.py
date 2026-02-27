@@ -115,11 +115,20 @@ def _output_filename(group_id, is_folder):
     stem, _ = os.path.splitext(base)
     return f"{stem}.txt"
 
-def _save_concatenated_results(rows, output_dir):
+def _save_concatenated_results(rows, output_dir, replace_sequence_token=False, sequence_token="000000001"):
     os.makedirs(output_dir, exist_ok=True)
     filename = datetime.now().strftime("results_%Y%m%d_%H%M%S.txt")
     output_path = os.path.join(output_dir, filename)
-    content = "\n".join(str(row.get("output", "")) for row in rows)
+    token = str(sequence_token or "")
+    token_width = len(token)
+    concatenated_outputs = []
+    for idx, row in enumerate(rows, start=1):
+        output_text = str(row.get("output", ""))
+        if replace_sequence_token and token:
+            replacement = str(idx).zfill(token_width)
+            output_text = output_text.replace(token, replacement)
+        concatenated_outputs.append(output_text)
+    content = "\n".join(concatenated_outputs)
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(content)
     return output_path
@@ -213,7 +222,12 @@ def process_job(job_id, meta):
         concat_results_dir = meta.get("concat_results_dir", "")
         if concat_results_dir:
             try:
-                concat_path = _save_concatenated_results(rows, concat_results_dir)
+                concat_path = _save_concatenated_results(
+                    rows,
+                    concat_results_dir,
+                    replace_sequence_token=True,
+                    sequence_token="000000001"
+                )
                 meta["concatenated_results_saved"] = True
                 meta["concatenated_results_path"] = concat_path
             except Exception as e:
