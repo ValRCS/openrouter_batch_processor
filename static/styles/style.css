@@ -33,6 +33,39 @@ h1 {
   color: #333;
 }
 
+.language-toggle {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.language-toggle-label {
+  font-size: 13px;
+  color: #444;
+}
+
+.language-toggle-button {
+  padding: 6px 10px;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  background: #f3f3f3;
+  color: #222;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.language-toggle-button:hover {
+  background: #e8e8e8;
+}
+
+.language-toggle-button.active {
+  border-color: #0077cc;
+  background: #e6f2ff;
+  color: #005fa3;
+}
+
 label {
   display: block;
   margin: 12px 0 6px;
@@ -255,6 +288,12 @@ footer {
   .container {
     width: 90vw;
     padding: 24px;
+  }
+
+  .language-toggle {
+    align-self: center;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .jobs-container {

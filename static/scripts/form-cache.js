@@ -26,6 +26,63 @@
   const existingFolderField = document.querySelector('input[name="existing_folder"]');
   const existingFolderButtons = Array.from(document.querySelectorAll("[data-existing-folder]"));
   const existingFolderStatus = document.getElementById("existing-folder-status");
+  const statusFallbackBuilders = {
+    "status.selected_zip": ({ name }) => `Selected existing ZIP: ${name}`,
+    "status.selected_folder": ({ name }) => `Selected folder: ${name}/`
+  };
+
+  const translate = (key, vars = {}, fallbackBuilder = null) => {
+    const i18n = window.formCacheI18n;
+    if (i18n && typeof i18n.t === "function") {
+      return String(i18n.t(key, vars));
+    }
+    if (typeof fallbackBuilder === "function") {
+      return String(fallbackBuilder(vars));
+    }
+    return key;
+  };
+
+  const setStatusTranslationMeta = (statusElement, translationKey = "", translationVars = null) => {
+    if (!statusElement) {
+      return;
+    }
+
+    if (!translationKey) {
+      delete statusElement.dataset.i18nStatusKey;
+      delete statusElement.dataset.i18nStatusVars;
+      return;
+    }
+
+    statusElement.dataset.i18nStatusKey = translationKey;
+    statusElement.dataset.i18nStatusVars = JSON.stringify(translationVars || {});
+  };
+
+  const renderStatusFromTranslationMeta = (statusElement) => {
+    if (!statusElement) {
+      return;
+    }
+
+    const translationKey = statusElement.dataset.i18nStatusKey;
+    if (!translationKey) {
+      return;
+    }
+
+    let vars = {};
+    const varsJson = statusElement.dataset.i18nStatusVars;
+    if (varsJson) {
+      try {
+        vars = JSON.parse(varsJson);
+      } catch (error) {
+        vars = {};
+      }
+    }
+
+    statusElement.textContent = translate(
+      translationKey,
+      vars,
+      statusFallbackBuilders[translationKey]
+    );
+  };
 
   const updateZipRequired = () => {
     if (!zipField) {
@@ -37,12 +94,18 @@
     zipField.required = !(hasUpload || hasExisting || hasFolder);
   };
 
-  const setExistingZipStatus = (message, isError = false) => {
+  const setExistingZipStatus = (
+    message,
+    isError = false,
+    translationKey = "",
+    translationVars = null
+  ) => {
     if (!existingZipStatus) {
       return;
     }
     existingZipStatus.textContent = message;
     existingZipStatus.classList.toggle("error", isError);
+    setStatusTranslationMeta(existingZipStatus, translationKey, translationVars);
   };
 
   const setActiveExistingZip = (zipName) => {
@@ -52,12 +115,18 @@
     });
   };
 
-  const setExistingFolderStatus = (message, isError = false) => {
+  const setExistingFolderStatus = (
+    message,
+    isError = false,
+    translationKey = "",
+    translationVars = null
+  ) => {
     if (!existingFolderStatus) {
       return;
     }
     existingFolderStatus.textContent = message;
     existingFolderStatus.classList.toggle("error", isError);
+    setStatusTranslationMeta(existingFolderStatus, translationKey, translationVars);
   };
 
   const setActiveExistingFolder = (folderName) => {
@@ -156,7 +225,12 @@
         zipField.value = "";
         existingZipField.value = zipName;
         setActiveExistingZip(zipName);
-        setExistingZipStatus(`Selected existing ZIP: ${zipName}`);
+        setExistingZipStatus(
+          translate("status.selected_zip", { name: zipName }, statusFallbackBuilders["status.selected_zip"]),
+          false,
+          "status.selected_zip",
+          { name: zipName }
+        );
         if (existingFolderField) {
           existingFolderField.value = "";
         }
@@ -178,7 +252,16 @@
         zipField.value = "";
         existingFolderField.value = folderName;
         setActiveExistingFolder(folderName);
-        setExistingFolderStatus(`Selected folder: ${folderName}/`);
+        setExistingFolderStatus(
+          translate(
+            "status.selected_folder",
+            { name: folderName },
+            statusFallbackBuilders["status.selected_folder"]
+          ),
+          false,
+          "status.selected_folder",
+          { name: folderName }
+        );
         if (existingZipField) {
           existingZipField.value = "";
         }
@@ -188,6 +271,11 @@
       });
     });
   }
+
+  document.addEventListener("marc-language-change", () => {
+    renderStatusFromTranslationMeta(existingZipStatus);
+    renderStatusFromTranslationMeta(existingFolderStatus);
+  });
 
   form.addEventListener("submit", () => {
     if (apiKeyField) {

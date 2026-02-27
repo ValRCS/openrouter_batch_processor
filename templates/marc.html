@@ -5,42 +5,65 @@
   </head>
   <body data-cache-scope="marc">
     <div class="container">
-      <h1>Batch Processor 📚 → 📄</h1>
-      <h2>Converter of Images into MARC Text</h2>
-      <p>Masveida apstrādes rīks - attēlu pārveidotājs MARC tekstā</p>
+      <div class="language-toggle" role="group" aria-label="Language selector">
+        <span class="language-toggle-label" data-i18n="language.label">Language:</span>
+        <button type="button" class="language-toggle-button" data-lang="en">
+          <span data-i18n="language.english">English</span>
+        </button>
+        <button type="button" class="language-toggle-button" data-lang="lv">
+          <span data-i18n="language.latvian">Latviešu</span>
+        </button>
+      </div>
+      <h1 data-i18n="marc.title_main">Batch Processor 📚 → 📄</h1>
+      <h2 data-i18n="marc.title_sub">Converter of Images into MARC Text</h2>
+      <p data-i18n="marc.subtitle">Batch processing tool for converting images to MARC text</p>
       <form method="post" enctype="multipart/form-data">
-        <label>API Key:</label>
+        <label data-i18n="marc.api_key_label">API Key:</label>
         <input type="text" name="api_key" required>
 
-        <label>System Prompt:</label>
+        <label data-i18n="marc.system_prompt_label">System Prompt:</label>
         <button type="button" id="load-marc-prompt" class="secondary-button">
-          Load from static/prompts/marc.txt
+          <span data-i18n="marc.load_prompt_button">Load from static/prompts/marc.txt</span>
         </button>
         <textarea name="system_prompt" rows="4" cols="50"></textarea>
 
-        <label>Username:</label>
-        <input type="text" name="username" placeholder="e.g. rek_user">
+        <label data-i18n="marc.username_label">Username:</label>
+        <input
+          type="text"
+          name="username"
+          placeholder="e.g. rek_user"
+          data-i18n-placeholder="marc.username_placeholder"
+        >
 
-        <label>Custom Footer:</label>
+        <label data-i18n="marc.custom_footer_label">Custom Footer:</label>
         <textarea
           name="customFooter"
           class="compact-textarea"
           rows="3"
           placeholder="Optional text appended after each successful LLM response"
+          data-i18n-placeholder="marc.custom_footer_placeholder"
         ></textarea>
 
-        <label>Choose Model:</label>
+        <label data-i18n="marc.choose_model_label">Choose Model:</label>
         {% include "_model_dropdown.html" %}
 
-        <label>Or enter custom model ID:</label>
-        <input type="text" name="model_custom" placeholder="e.g. openai/gpt-4.1-mini">
+        <label data-i18n="marc.custom_model_label">Or enter custom model ID:</label>
+        <input
+          type="text"
+          name="model_custom"
+          placeholder="e.g. openai/gpt-4.1-mini"
+          data-i18n-placeholder="marc.custom_model_placeholder"
+        >
 
-        <label>Upload ZIP (optional if choosing a folder below):</label>
+        <label data-i18n="marc.upload_zip_label">Upload ZIP (optional if choosing a folder below):</label>
         <input type="file" name="zipfile" required>
         <input type="hidden" name="existing_folder" value="">
 
         <div class="existing-zips">
-          <p class="existing-zips-title">Or choose a subfolder from <code>{{ existing_folders_label }}</code>:</p>
+          <p class="existing-zips-title">
+            <span data-i18n="marc.choose_subfolder_prefix">Or choose a subfolder from</span>
+            <code>{{ existing_folders_label }}</code>:
+          </p>
           {% if existing_folders %}
             <ul class="existing-zips-list">
               {% for folder_item in existing_folders %}
@@ -51,40 +74,48 @@
                     data-existing-folder="{{ folder_item.name }}"
                   >
                     <span class="existing-zip-name">{{ folder_item.name }}/</span>
-                    <span class="existing-zip-meta">{{ folder_item.items_label }} | {{ folder_item.modified_at }}</span>
+                    <span
+                      class="existing-zip-meta"
+                      data-item-count="{{ folder_item.items_label | replace(' items', '') | replace(' item', '') }}"
+                      data-modified-at="{{ folder_item.modified_at }}"
+                    >{{ folder_item.items_label }} | {{ folder_item.modified_at }}</span>
                   </button>
                 </li>
               {% endfor %}
             </ul>
           {% else %}
-            <p class="existing-zips-empty">No folders found in <code>{{ existing_folders_label }}</code>.</p>
+            <p class="existing-zips-empty">
+              <span data-i18n="marc.no_folders_prefix">No folders found in</span>
+              <code>{{ existing_folders_label }}</code>.
+            </p>
           {% endif %}
           <p id="existing-folder-status" class="existing-zip-status" aria-live="polite"></p>
         </div>
 
         <label>
           <input type="checkbox" name="include_inputs" value="true">
-          Include inputs in output zip
+          <span data-i18n="marc.include_inputs">Include inputs in output zip</span>
         </label>
         <label>
           <input type="checkbox" name="separate_outputs" value="true" checked>
-          Separate text files in output zip
+          <span data-i18n="marc.separate_outputs">Separate text files in output zip</span>
         </label>
         <label>
           <input type="checkbox" name="include_metadata" value="true">
-          Include metadata.json
+          <span data-i18n="marc.include_metadata">Include metadata.json</span>
         </label>
         <label>
           <input type="checkbox" name="save_concat_results" value="true" checked>
-          Save concatenated results to <code>/mnt/mi_rek/results</code>
+          <span data-i18n="marc.save_concat_prefix">Save concatenated results to</span>
+          <code>/mnt/mi_rek/results</code>
         </label>
         {% if error %}
           <p class="error">{{ error }}</p>
         {% endif %}
 
-        <input type="submit" value="Submit Job">
+        <input type="submit" value="Submit Job" data-i18n-value="marc.submit_job">
       </form>
-      <p><a href="{{ url_for('jobs_archive') }}">Jobs archive</a></p>
+      <p><a href="{{ url_for('jobs_archive') }}" data-i18n="marc.jobs_archive">Jobs archive</a></p>
     </div>
     <script>
       (() => {
@@ -111,13 +142,19 @@
             promptField.dispatchEvent(new Event("input", { bubbles: true }));
           } catch (error) {
             console.error("Failed to load MARC system prompt:", error);
-            alert("Failed to load prompt from static/prompts/marc.txt.");
+            const i18n = window.formCacheI18n;
+            const message =
+              i18n && typeof i18n.t === "function"
+                ? i18n.t("marc.prompt_load_error")
+                : "Failed to load prompt from static/prompts/marc.txt.";
+            alert(message);
           } finally {
             loadPromptButton.disabled = false;
           }
         });
       })();
     </script>
+    <script src="{{ url_for('static', filename='scripts/marc-i18n.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/form-cache.js') }}"></script>
     <script>
       (() => {
