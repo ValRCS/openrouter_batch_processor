@@ -684,7 +684,7 @@ def handle_submission(
             return render_template(template_name, **context), 400
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        include_inputs = "include_inputs" in request.form
+        include_inputs = source_route == "marc" and "include_inputs" in request.form
         include_metadata = "include_metadata" in request.form
         save_concat_results = "save_concat_results" in request.form
         separate_outputs = "separate_outputs" in request.form
@@ -820,6 +820,7 @@ def status(job_id):
                 result_url=url_for("download", job_id=job_id),
                 zip_filename=zip_filename,
                 include_inputs=meta.get("include_inputs", False),
+                show_include_inputs=is_marc,
                 back_url=back_url,
                 back_label=back_label
             )
@@ -830,6 +831,7 @@ def status(job_id):
                 status=f"Error: {e}",
                 model=model,
                 submitted_at=submitted_at,
+                show_include_inputs=is_marc,
                 back_url=back_url,
                 back_label=back_label
             )
@@ -841,6 +843,7 @@ def status(job_id):
             model=model,
             submitted_at=submitted_at,
             include_inputs=meta.get("include_inputs", False),
+            show_include_inputs=is_marc,
             back_url=back_url,
             back_label=back_label
         )
