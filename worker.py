@@ -1,4 +1,4 @@
-import os, requests, pandas as pd, time, json, zipfile
+import os, requests, pandas as pd, time, json, zipfile, re
 import base64
 import mimetypes
 from datetime import datetime
@@ -129,6 +129,12 @@ def _parsed_json_value(raw_output):
     stripped_raw_output = stripped_raw_output.strip()
     try:
         return json.loads(stripped_raw_output)
+    except json.JSONDecodeError:
+        stripped_raw_output = re.sub(r",(\s*[}\]])", r"\1", stripped_raw_output)
+        try:
+            return json.loads(stripped_raw_output)
+        except json.JSONDecodeError:
+            return False
     except Exception:
         return False
 
