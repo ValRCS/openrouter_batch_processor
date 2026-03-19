@@ -9,7 +9,6 @@ Minimal Flask application for batch-processing text files through OpenRouter.ai 
 - Results packaged in timestamped ZIP containing selected output artifacts:
   - separate text files and/or `output.csv` and/or `output.json`
   - meta.json (with timestamps, model info)
-  - original input files
 
 ## Running
 

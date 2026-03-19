@@ -336,10 +336,4 @@ def process_job(job_id, meta):
                 zf.write(input_csv_path, arcname="input.csv")
             if include_metadata and os.path.exists(meta_file):
                 zf.write(meta_file, arcname="meta.json")
-        # Only include inputs if requested
-        if meta.get("include_inputs", False):
-            for fpath in _list_files_sorted(input_dir):
-                rel = _normalize_rel(fpath, input_dir)
-                zf.write(fpath, arcname=f"input/{rel}")
-
     return zip_path

@@ -684,7 +684,6 @@ def handle_submission(
             return render_template(template_name, **context), 400
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        include_inputs = source_route == "marc" and "include_inputs" in request.form
         include_metadata = "include_metadata" in request.form
         save_concat_results = "save_concat_results" in request.form
         separate_outputs = "separate_outputs" in request.form
@@ -719,7 +718,6 @@ def handle_submission(
             "model": model,
             "reasoning_mode": reasoning_mode,
             "submitted_at": timestamp,
-            "include_inputs": include_inputs,
             "group_by_subfolder": group_by_subfolder,
             "separate_outputs": separate_outputs if source_route == "marc" else False,
             "output_formats": output_formats if source_route == "index" else [],
@@ -819,8 +817,6 @@ def status(job_id):
                 elapsed_time=elapsed_time,
                 result_url=url_for("download", job_id=job_id),
                 zip_filename=zip_filename,
-                include_inputs=meta.get("include_inputs", False),
-                show_include_inputs=is_marc,
                 back_url=back_url,
                 back_label=back_label
             )
@@ -831,7 +827,6 @@ def status(job_id):
                 status=f"Error: {e}",
                 model=model,
                 submitted_at=submitted_at,
-                show_include_inputs=is_marc,
                 back_url=back_url,
                 back_label=back_label
             )
@@ -842,8 +837,6 @@ def status(job_id):
             status="Running",
             model=model,
             submitted_at=submitted_at,
-            include_inputs=meta.get("include_inputs", False),
-            show_include_inputs=is_marc,
             back_url=back_url,
             back_label=back_label
         )

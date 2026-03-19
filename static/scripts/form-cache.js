@@ -16,7 +16,6 @@
   const modelCustom = document.querySelector('input[name="model_custom"]');
   const reasoningModeField = document.querySelector('select[name="reasoning_mode"]');
   const apiKeyField = document.querySelector('input[name="api_key"]');
-  const includeInputsField = document.querySelector('input[name="include_inputs"]');
   const includeMetadataField = document.querySelector('input[name="include_metadata"]');
   const outputFormatFields = Array.from(document.querySelectorAll('input[name="output_formats"]'));
   const separateOutputsField = document.querySelector('input[name="separate_outputs"]');
@@ -186,11 +185,6 @@
     }
   }
 
-  const storedIncludeInputs = localStorage.getItem(key("include_inputs"));
-  if (storedIncludeInputs !== null && includeInputsField) {
-    includeInputsField.checked = storedIncludeInputs === "true";
-  }
-
   const storedIncludeMetadata = localStorage.getItem(key("include_metadata"));
   if (storedIncludeMetadata !== null && includeMetadataField) {
     includeMetadataField.checked = storedIncludeMetadata === "true";
@@ -346,10 +340,6 @@
 
     if (reasoningModeField) {
       localStorage.setItem(key("reasoning_mode"), reasoningModeField.value);
-    }
-
-    if (includeInputsField) {
-      localStorage.setItem(key("include_inputs"), String(includeInputsField.checked));
     }
 
     if (includeMetadataField) {
