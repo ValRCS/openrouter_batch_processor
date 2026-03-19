@@ -116,8 +116,19 @@ def _output_filename(group_id, is_folder):
     return f"{stem}.txt"
 
 def _parsed_json_value(raw_output):
+    stripped_raw_output = "" if raw_output is None else str(raw_output)
+    start_candidates = [idx for idx in (stripped_raw_output.find("{"), stripped_raw_output.find("[")) if idx != -1]
+    end_candidates = [idx for idx in (stripped_raw_output.rfind("}"), stripped_raw_output.rfind("]")) if idx != -1]
+
+    if start_candidates and end_candidates:
+        start_idx = min(start_candidates)
+        end_idx = max(end_candidates) + 1
+        if end_idx > start_idx:
+            stripped_raw_output = stripped_raw_output[start_idx:end_idx]
+
+    stripped_raw_output = stripped_raw_output.strip()
     try:
-        return json.loads(raw_output)
+        return json.loads(stripped_raw_output)
     except Exception:
         return False
 
