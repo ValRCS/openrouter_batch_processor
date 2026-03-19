@@ -18,6 +18,7 @@
   const apiKeyField = document.querySelector('input[name="api_key"]');
   const includeInputsField = document.querySelector('input[name="include_inputs"]');
   const includeMetadataField = document.querySelector('input[name="include_metadata"]');
+  const outputFormatFields = Array.from(document.querySelectorAll('input[name="output_formats"]'));
   const separateOutputsField = document.querySelector('input[name="separate_outputs"]');
   const saveConcatResultsField = document.querySelector('input[name="save_concat_results"]');
   const zipField = document.querySelector('input[name="zipfile"]');
@@ -27,6 +28,7 @@
   const existingFolderField = document.querySelector('input[name="existing_folder"]');
   const existingFolderButtons = Array.from(document.querySelectorAll("[data-existing-folder]"));
   const existingFolderStatus = document.getElementById("existing-folder-status");
+  const isMainScope = scope === "main";
   const statusFallbackBuilders = {
     "status.selected_zip": ({ name }) => `Selected existing ZIP: ${name}`,
     "status.selected_folder": ({ name }) => `Selected folder: ${name}/`
@@ -194,6 +196,31 @@
     includeMetadataField.checked = storedIncludeMetadata === "true";
   }
 
+  const storedOutputFormats = localStorage.getItem(key("output_formats"));
+  if (storedOutputFormats !== null && outputFormatFields.length) {
+    let selectedFormats = [];
+    try {
+      const parsedFormats = JSON.parse(storedOutputFormats);
+      if (Array.isArray(parsedFormats)) {
+        selectedFormats = parsedFormats.map((value) => String(value));
+      }
+    } catch (error) {
+      selectedFormats = [];
+    }
+    outputFormatFields.forEach((field) => {
+      field.checked = selectedFormats.includes(field.value);
+    });
+  } else {
+    const storedSeparateOutputs = localStorage.getItem(key("separate_outputs"));
+    if (storedSeparateOutputs !== null && outputFormatFields.length) {
+      outputFormatFields.forEach((field) => {
+        field.checked = storedSeparateOutputs === "true"
+          ? field.value === "text"
+          : field.value === "csv";
+      });
+    }
+  }
+
   const storedSeparateOutputs = localStorage.getItem(key("separate_outputs"));
   if (storedSeparateOutputs !== null && separateOutputsField) {
     separateOutputsField.checked = storedSeparateOutputs === "true";
@@ -288,7 +315,16 @@
     renderStatusFromTranslationMeta(existingFolderStatus);
   });
 
-  form.addEventListener("submit", () => {
+  form.addEventListener("submit", (event) => {
+    if (isMainScope && outputFormatFields.length) {
+      const hasSelectedOutputFormat = outputFormatFields.some((field) => field.checked);
+      if (!hasSelectedOutputFormat) {
+        event.preventDefault();
+        alert("Select at least one output format before submitting the job.");
+        return;
+      }
+    }
+
     if (apiKeyField) {
       localStorage.setItem(key("api_key"), apiKeyField.value);
     }
@@ -318,6 +354,13 @@
 
     if (includeMetadataField) {
       localStorage.setItem(key("include_metadata"), String(includeMetadataField.checked));
+    }
+
+    if (outputFormatFields.length) {
+      const selectedOutputFormats = outputFormatFields
+        .filter((field) => field.checked)
+        .map((field) => field.value);
+      localStorage.setItem(key("output_formats"), JSON.stringify(selectedOutputFormats));
     }
 
     if (separateOutputsField) {

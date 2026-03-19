@@ -6,8 +6,8 @@ Minimal Flask application for batch-processing text files through OpenRouter.ai 
 - Upload ZIP of text files
 - Provide API key, system prompt, and model
 - Jobs run in background threads (ThreadPoolExecutor)
-- Results packaged in timestamped ZIP containing:
-  - output.csv
+- Results packaged in timestamped ZIP containing selected output artifacts:
+  - separate text files and/or `output.csv` and/or `output.json`
   - meta.json (with timestamps, model info)
   - original input files
 

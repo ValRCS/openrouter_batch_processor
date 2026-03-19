@@ -683,6 +683,26 @@ def handle_submission(
                 context["error"] = f"Please upload a ZIP file or select one from {existing_zips_label}."
             return render_template(template_name, **context), 400
 
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        include_inputs = "include_inputs" in request.form
+        include_metadata = "include_metadata" in request.form
+        save_concat_results = "save_concat_results" in request.form
+        separate_outputs = "separate_outputs" in request.form
+        output_formats = []
+        if source_route == "index":
+            allowed_output_formats = {"text", "csv", "json"}
+            for output_format in request.form.getlist("output_formats"):
+                normalized_output_format = output_format.strip().lower()
+                if (
+                    normalized_output_format in allowed_output_formats
+                    and normalized_output_format not in output_formats
+                ):
+                    output_formats.append(normalized_output_format)
+            if not output_formats:
+                context = dict(template_context)
+                context["error"] = "Select at least one output format."
+                return render_template(template_name, **context), 400
+
         job_id = str(uuid.uuid4())
         job_dir = os.path.join(app.config["UPLOAD_FOLDER"], job_id)
         os.makedirs(job_dir, exist_ok=True)
@@ -690,12 +710,6 @@ def handle_submission(
             staged_upload_name = "uploaded_input_staging.zip"
             staged_upload_path = os.path.join(job_dir, staged_upload_name)
             file.save(staged_upload_path)
-
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        include_inputs = "include_inputs" in request.form
-        separate_outputs = "separate_outputs" in request.form
-        include_metadata = "include_metadata" in request.form
-        save_concat_results = "save_concat_results" in request.form
 
         meta = {
             "api_key": api_key,
@@ -707,7 +721,8 @@ def handle_submission(
             "submitted_at": timestamp,
             "include_inputs": include_inputs,
             "group_by_subfolder": group_by_subfolder,
-            "separate_outputs": separate_outputs,
+            "separate_outputs": separate_outputs if source_route == "marc" else False,
+            "output_formats": output_formats if source_route == "index" else [],
             "include_metadata": include_metadata,
             "save_concat_results": save_concat_results if source_route == "marc" else False,
             "concat_results_dir": app.config["MARC_RESULTS_FOLDER"] if source_route == "marc" else "",

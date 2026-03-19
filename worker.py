@@ -115,6 +115,23 @@ def _output_filename(group_id, is_folder):
     stem, _ = os.path.splitext(base)
     return f"{stem}.txt"
 
+def _parsed_json_value(raw_output):
+    try:
+        return json.loads(raw_output)
+    except Exception:
+        return False
+
+def _build_json_output_rows(rows):
+    json_rows = []
+    for row in rows:
+        raw_output = "" if row.get("output") is None else str(row.get("output"))
+        json_rows.append({
+            "file_name": row.get("file", ""),
+            "raw_output": raw_output,
+            "parsed_json": _parsed_json_value(raw_output)
+        })
+    return json_rows
+
 def _save_concatenated_results(rows, output_dir, replace_sequence_token=False, sequence_token="000000001"):
     os.makedirs(output_dir, exist_ok=True)
     filename = datetime.now().strftime("results_%Y%m%d_%H%M%S.txt")
@@ -145,7 +162,7 @@ def process_job(job_id, meta):
     job_dir = os.path.join(UPLOAD_FOLDER, job_id)
     input_dir = os.path.join(job_dir, "input")
     output_path = os.path.join(job_dir, "output.csv")
-    input_csv_path = os.path.join(job_dir, "input.csv")   # <-- new file
+    output_json_path = os.path.join(job_dir, "output.json")
 
     # Generate timestamped ZIP name
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
@@ -156,9 +173,27 @@ def process_job(job_id, meta):
     api_key = meta["api_key"]
     model = meta.get("model", "google/gemini-2.5-flash")
     group_by_subfolder = meta.get("group_by_subfolder", False)
+    source_route = meta.get("source_route")
+    is_main_route = source_route == "index"
     separate_outputs = meta.get("separate_outputs", False)
     include_metadata = meta.get("include_metadata", False)
     custom_footer = meta.get("custom_footer", "")
+    output_formats = meta.get("output_formats", [])
+    if is_main_route:
+        normalized_output_formats = []
+        for output_format in output_formats:
+            normalized_output_format = str(output_format).strip().lower()
+            if (
+                normalized_output_format in {"text", "csv", "json"}
+                and normalized_output_format not in normalized_output_formats
+            ):
+                normalized_output_formats.append(normalized_output_format)
+        output_formats = normalized_output_formats or (
+            ["text"] if separate_outputs else ["csv"]
+        )
+        meta["output_formats"] = output_formats
+    else:
+        input_csv_path = os.path.join(job_dir, "input.csv")
 
     # for progress tracking
     groups = _build_groups(input_dir, group_by_subfolder)
@@ -168,7 +203,7 @@ def process_job(job_id, meta):
     meta["processed_files"] = 0
 
     rows = []
-    input_rows = _collect_input_rows(input_dir)   # <-- for input.csv
+    input_rows = _collect_input_rows(input_dir) if not is_main_route else []
 
     for idx, group in enumerate(groups, start=1):
         group_id = group["id"]
@@ -237,14 +272,24 @@ def process_job(job_id, meta):
                 meta["concatenated_results_saved"] = False
                 meta["concatenated_results_error"] = str(e)
 
-    # Save CSV
-    pd.DataFrame(rows).to_csv(output_path, index=False)
-    # sort input.csv rows alphabetically by full_path
-    df_input = pd.DataFrame(input_rows).sort_values(by="full_path")
-    df_input.to_csv(input_csv_path, index=False)   # <-- save input.csv
+    if is_main_route:
+        if "csv" in output_formats:
+            pd.DataFrame(rows).to_csv(output_path, index=False)
+        if "json" in output_formats:
+            with open(output_json_path, "w", encoding="utf-8") as f:
+                json.dump(_build_json_output_rows(rows), f, indent=2, ensure_ascii=False)
+    else:
+        # Save CSV
+        pd.DataFrame(rows).to_csv(output_path, index=False)
+        # sort input.csv rows alphabetically by full_path
+        df_input = pd.DataFrame(input_rows).sort_values(by="full_path")
+        df_input.to_csv(input_csv_path, index=False)
 
     output_text_files = []
-    if separate_outputs:
+    should_write_text_outputs = (
+        "text" in output_formats if is_main_route else separate_outputs
+    )
+    if should_write_text_outputs:
         output_text_dir = os.path.join(job_dir, "output_texts")
         os.makedirs(output_text_dir, exist_ok=True)
         for row in rows:
@@ -273,14 +318,22 @@ def process_job(job_id, meta):
 
     # Create results.zip
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        if separate_outputs:
+        if is_main_route:
             for fpath, filename in output_text_files:
                 zf.write(fpath, arcname=filename)
+            if "csv" in output_formats and os.path.exists(output_path):
+                zf.write(output_path, arcname="output.csv")
+            if "json" in output_formats and os.path.exists(output_json_path):
+                zf.write(output_json_path, arcname="output.json")
             if include_metadata and os.path.exists(meta_file):
                 zf.write(meta_file, arcname="meta.json")
         else:
-            zf.write(output_path, arcname="output.csv")
-            zf.write(input_csv_path, arcname="input.csv")   # <-- include in zip
+            if separate_outputs:
+                for fpath, filename in output_text_files:
+                    zf.write(fpath, arcname=filename)
+            else:
+                zf.write(output_path, arcname="output.csv")
+                zf.write(input_csv_path, arcname="input.csv")
             if include_metadata and os.path.exists(meta_file):
                 zf.write(meta_file, arcname="meta.json")
         # Only include inputs if requested

@@ -53,10 +53,21 @@
           <p id="existing-zip-status" class="existing-zip-status" aria-live="polite"></p>
         </div>
 
-        <label>
-          <input type="checkbox" name="separate_outputs" value="true" checked>
-          Separate text files in output zip
-        </label>
+        <fieldset>
+          <legend>Output formats (select one or more)</legend>
+          <label>
+            <input type="checkbox" name="output_formats" value="text" checked>
+            Separate text files in output zip
+          </label>
+          <label>
+            <input type="checkbox" name="output_formats" value="csv">
+            Include output.csv
+          </label>
+          <label>
+            <input type="checkbox" name="output_formats" value="json">
+            Include output.json
+          </label>
+        </fieldset>
         <label>
           <input type="checkbox" name="include_inputs" value="true">
           Include inputs in output zip
