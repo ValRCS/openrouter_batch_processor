@@ -21,7 +21,8 @@ jobs = {}
 metas = {}
 zip_registry_lock = threading.Lock()
 
-DEFAULT_MODEL_ID = "google/gemini-3.1-flash-lite-preview"
+MAIN_DEFAULT_MODEL_ID = "google/gemini-3.1-flash-lite-preview"
+MARC_DEFAULT_MODEL_ID = "openai/gpt-5.4"
 MODEL_DROPDOWN_GROUPS = [
     {
         "label": "Google",
@@ -666,7 +667,8 @@ def handle_submission(
     existing_folders_label=None
 ):
     template_context = dict(template_context or {})
-    template_context.setdefault("default_model_id", DEFAULT_MODEL_ID)
+    default_model_id = MARC_DEFAULT_MODEL_ID if source_route == "marc" else MAIN_DEFAULT_MODEL_ID
+    template_context.setdefault("default_model_id", default_model_id)
     template_context.setdefault("model_dropdown_groups", MODEL_DROPDOWN_GROUPS)
     if existing_zips_folder is None:
         existing_zips_folder = app.config["EXISTING_ZIPS_FOLDER"]
@@ -682,7 +684,7 @@ def handle_submission(
         system_prompt = request.form["system_prompt"]
         username = request.form.get("username", "").strip()
         custom_footer = request.form.get("customFooter", "")
-        model_dropdown = request.form.get("model_dropdown", DEFAULT_MODEL_ID)
+        model_dropdown = request.form.get("model_dropdown", default_model_id)
         if source_route == "index":
             model_custom = request.form.get("model_custom", "").strip()
             model = model_custom if model_custom else model_dropdown
