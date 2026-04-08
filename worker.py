@@ -107,6 +107,74 @@ def _write_meta(job_dir, meta):
         json.dump(meta_for_disk, f, indent=2, ensure_ascii=False)
     return meta_file
 
+def _new_cost_summary():
+    return {
+        "cost_unit": "credits",
+        "api_requests": 0,
+        "successful_requests": 0,
+        "failed_requests": 0,
+        "byok_requests": 0,
+        "total_cost": 0.0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "reasoning_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "input_audio_tokens": 0,
+        "input_video_tokens": 0,
+        "output_audio_tokens": 0,
+        "output_image_tokens": 0,
+        "upstream_inference_cost": 0.0,
+        "upstream_inference_prompt_cost": 0.0,
+        "upstream_inference_completions_cost": 0.0
+    }
+
+def _add_cost_summary_usage(cost_summary, usage):
+    if not isinstance(usage, dict):
+        return
+
+    prompt_details = usage.get("prompt_tokens_details") or {}
+    completion_details = usage.get("completion_tokens_details") or {}
+    cost_details = usage.get("cost_details") or {}
+
+    int_fields = (
+        ("prompt_tokens", usage.get("prompt_tokens")),
+        ("completion_tokens", usage.get("completion_tokens")),
+        ("total_tokens", usage.get("total_tokens")),
+        ("reasoning_tokens", completion_details.get("reasoning_tokens")),
+        ("cached_tokens", prompt_details.get("cached_tokens")),
+        ("cache_write_tokens", prompt_details.get("cache_write_tokens")),
+        ("input_audio_tokens", prompt_details.get("audio_tokens")),
+        ("input_video_tokens", prompt_details.get("video_tokens")),
+        ("output_audio_tokens", completion_details.get("audio_tokens")),
+        ("output_image_tokens", completion_details.get("image_tokens"))
+    )
+    for field_name, value in int_fields:
+        if value is None:
+            continue
+        try:
+            cost_summary[field_name] += int(value)
+        except (TypeError, ValueError):
+            continue
+
+    float_fields = (
+        ("total_cost", usage.get("cost")),
+        ("upstream_inference_cost", cost_details.get("upstream_inference_cost")),
+        ("upstream_inference_prompt_cost", cost_details.get("upstream_inference_prompt_cost")),
+        ("upstream_inference_completions_cost", cost_details.get("upstream_inference_completions_cost"))
+    )
+    for field_name, value in float_fields:
+        if value is None:
+            continue
+        try:
+            cost_summary[field_name] = round(cost_summary[field_name] + float(value), 12)
+        except (TypeError, ValueError):
+            continue
+
+    if usage.get("is_byok") is True:
+        cost_summary["byok_requests"] += 1
+
 def _output_filename(group_id, is_folder):
     normalized = group_id.rstrip("/")
     base = os.path.basename(normalized) if normalized else "output"
@@ -218,6 +286,8 @@ def process_job(job_id, meta):
     group_is_folder = {group["id"]: group["is_folder"] for group in groups}
     meta["total_files"] = total
     meta["processed_files"] = 0
+    cost_summary = _new_cost_summary()
+    meta["cost_summary"] = cost_summary
 
     rows = []
     input_rows = _collect_input_rows(input_dir) if not is_main_route else []
@@ -241,25 +311,36 @@ def process_job(job_id, meta):
         else:
             reasoning_mode = str(meta.get("reasoning_mode", "off")).strip().lower()
             payload = {
-                "model": meta.get("model", "google/gemini-2.5-flash"),
+                "model": model,
                 "messages": [
-                    {"role": "system", "content": meta["system_prompt"]},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content}
                 ]
             }
             if reasoning_mode in {"true", "false"}:
                 payload["reasoning"] = {"enabled": reasoning_mode == "true"}
 
-            headers = {"Authorization": f"Bearer {meta['api_key']}"}
+            headers = {"Authorization": f"Bearer {api_key}"}
 
             should_append_footer = False
+            cost_summary["api_requests"] += 1
             try:
                 r = requests.post(OPENROUTER_URL, json=payload, headers=headers, timeout=120)
                 r.raise_for_status()
                 data = r.json()
-                reply = data["choices"][0]["message"]["content"]
+                usage = data.get("usage") or {}
+                choices = data.get("choices") or []
+                if not choices:
+                    raise KeyError("Missing completion choices")
+                message = choices[0].get("message") or {}
+                reply = message.get("content")
+                if reply is None:
+                    raise KeyError("Missing completion content")
+                _add_cost_summary_usage(cost_summary, usage)
+                cost_summary["successful_requests"] += 1
                 should_append_footer = True
             except Exception as e:
+                cost_summary["failed_requests"] += 1
                 reply = f"ERROR: {e}"
 
             if should_append_footer:
