@@ -21,6 +21,54 @@ jobs = {}
 metas = {}
 zip_registry_lock = threading.Lock()
 
+DEFAULT_MODEL_ID = "google/gemini-3.1-flash-lite-preview"
+MODEL_DROPDOWN_GROUPS = [
+    {
+        "label": "Google",
+        "options": [
+            {"id": "google/gemini-3.1-flash-lite-preview", "label": "Gemini 3.1 Flash Lite Preview"},
+            {"id": "google/gemini-3-flash-preview", "label": "Gemini 3 Flash Preview"},
+            {"id": "google/gemini-3.1-pro-preview", "label": "Gemini 3.1 Pro Preview"},
+        ],
+    },
+    {
+        "label": "OpenAI",
+        "options": [
+            {"id": "openai/gpt-5", "label": "GPT-5"},
+            {"id": "openai/gpt-5.1", "label": "GPT-5.1"},
+            {"id": "openai/gpt-5.2", "label": "GPT-5.2"},
+            {"id": "openai/gpt-5.4", "label": "GPT-5.4"},
+            {"id": "openai/gpt-5.4-nano", "label": "GPT-5.4 Nano"},
+            {"id": "openai/gpt-5.4-mini", "label": "GPT-5.4 Mini"},
+            {"id": "openai/gpt-5.4-pro", "label": "GPT-5.4 Pro"},
+        ],
+    },
+    {
+        "label": "Anthropic",
+        "options": [
+            {"id": "anthropic/claude-haiku-4.5", "label": "Claude Haiku 4.5"},
+            {"id": "anthropic/claude-sonnet-4.6", "label": "Claude Sonnet 4.6"},
+            {"id": "anthropic/claude-opus-4.6", "label": "Claude Opus 4.6"},
+        ],
+    },
+    {
+        "label": "xAI",
+        "options": [
+            {"id": "x-ai/grok-4.1-fast", "label": "Grok 4.1 Fast"},
+            {"id": "x-ai/grok-4.20", "label": "Grok 4.20"},
+        ],
+    },
+    {
+        "label": "Mistral AI",
+        "options": [
+            {"id": "mistralai/ministral-8b-2512", "label": "Ministral 3 8B 2512"},
+            {"id": "mistralai/mistral-small-2603", "label": "Mistral Small 4"},
+            {"id": "mistralai/mistral-medium-3.1", "label": "Mistral Medium 3.1"},
+            {"id": "mistralai/mistral-large-2512", "label": "Mistral Large 3 2512"},
+        ],
+    },
+]
+
 def format_file_size(size_bytes):
     units = ["B", "KB", "MB", "GB", "TB"]
     value = float(size_bytes)
@@ -617,7 +665,9 @@ def handle_submission(
     existing_folders_root=None,
     existing_folders_label=None
 ):
-    template_context = template_context or {}
+    template_context = dict(template_context or {})
+    template_context.setdefault("default_model_id", DEFAULT_MODEL_ID)
+    template_context.setdefault("model_dropdown_groups", MODEL_DROPDOWN_GROUPS)
     if existing_zips_folder is None:
         existing_zips_folder = app.config["EXISTING_ZIPS_FOLDER"]
     if existing_zips_label is None:
@@ -632,7 +682,7 @@ def handle_submission(
         system_prompt = request.form["system_prompt"]
         username = request.form.get("username", "").strip()
         custom_footer = request.form.get("customFooter", "")
-        model_dropdown = request.form.get("model_dropdown", "google/gemini-3-flash-preview")
+        model_dropdown = request.form.get("model_dropdown", DEFAULT_MODEL_ID)
         if source_route == "index":
             model_custom = request.form.get("model_custom", "").strip()
             model = model_custom if model_custom else model_dropdown

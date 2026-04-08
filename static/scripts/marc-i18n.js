@@ -150,9 +150,17 @@
   };
 
   const applyModelDefaultSuffix = () => {
-    const defaultModelOption = document.querySelector(
-      'select[name="model_dropdown"] option[value="google/gemini-3-flash-preview"]'
-    );
+    const modelDropdown = document.querySelector('select[name="model_dropdown"]');
+    if (!modelDropdown) {
+      return;
+    }
+
+    const defaultModelId = modelDropdown.dataset.defaultModel;
+    if (!defaultModelId) {
+      return;
+    }
+
+    const defaultModelOption = modelDropdown.querySelector(`option[value="${defaultModelId}"]`);
     if (!defaultModelOption) {
       return;
     }
