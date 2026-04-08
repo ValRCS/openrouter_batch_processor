@@ -45,14 +45,6 @@
         <label data-i18n="marc.choose_model_label">Choose Model:</label>
         {% include "_model_dropdown.html" %}
 
-        <label data-i18n="marc.custom_model_label">Or enter custom model ID:</label>
-        <input
-          type="text"
-          name="model_custom"
-          placeholder="e.g. openai/gpt-4.1-mini"
-          data-i18n-placeholder="marc.custom_model_placeholder"
-        >
-
         <label data-i18n="marc.upload_zip_label">Upload ZIP (optional if choosing a folder below):</label>
         <input type="file" name="zipfile" required>
         <input type="hidden" name="existing_folder" value="">

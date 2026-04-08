@@ -632,9 +632,12 @@ def handle_submission(
         system_prompt = request.form["system_prompt"]
         username = request.form.get("username", "").strip()
         custom_footer = request.form.get("customFooter", "")
-        model_custom = request.form.get("model_custom", "").strip()
         model_dropdown = request.form.get("model_dropdown", "google/gemini-3-flash-preview")
-        model = model_custom if model_custom else model_dropdown
+        if source_route == "index":
+            model_custom = request.form.get("model_custom", "").strip()
+            model = model_custom if model_custom else model_dropdown
+        else:
+            model = model_dropdown
         reasoning_mode = request.form.get("reasoning_mode", "off").strip().lower()
         if reasoning_mode not in {"off", "true", "false"}:
             reasoning_mode = "off"
