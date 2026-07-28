@@ -27,3 +27,5 @@ var/
 data/jobs/*
 .venv/
 logs/
+data/zips/
+

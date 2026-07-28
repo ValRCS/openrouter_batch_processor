@@ -20,7 +20,7 @@ Return only Aleph Sequential format record strictly following the template. Fiel
 000000001 500   L $$aFraktūras burti. [Use if title page is in old fracture print]
 000000001 505   L $$a[Transcribe volume titles if present]
 000000001 590   L $$aIeraksta pamatlīmenis izveidots ar mākslīgā intelekta rīka palīdzību.
-000000001 65301 L $$a[Topic/content term in Latvian. Use 1–3 concise nouns or noun phrases that describe what the resource is about. Prefer a specific topic if clear from the title page or content; otherwise use a broader subject term. Do not use full sentences, do not repeat the title verbatim, do not include genre/form/physical description here.]
+000000001 65300 L $$a[Topic/content term in Latvian. Use 1–3 concise nouns or noun phrases that describe what the resource is about. Prefer a specific topic if clear from the title page or content; otherwise use a broader subject term. Do not use full sentences, do not repeat the title verbatim, do not include genre/form/physical description here.]
 000000001 65306 L $$a[Genre/form/physical characteristic term in Latvian. Use a concise Latvian term describing what the item is, such as its literary form, document type, or physical nature. Examples: Dzeja, Romāni, Stāsti, Lugas, Esejas, Mācību līdzekļi, Albumi, Katalogi, Kartes, Vārdnīcas, Biogrāfijas, Atmiņas.]
 000000001 65306 L $$aAgrīnie darbi. [Use if the resource is published before 1850 (including)]
 000000001 7201  L $$a[Additional authors, if any. If none, omit this field, repeatable if needed].
