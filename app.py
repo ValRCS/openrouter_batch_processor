@@ -1,5 +1,5 @@
 from flask import Flask, request, render_template, redirect, url_for, send_file, jsonify
-import os, uuid, zipfile, json, shutil, tempfile, hashlib, threading
+import os, uuid, zipfile, json, shutil, tempfile, hashlib, threading, argparse
 from werkzeug.utils import secure_filename
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -10,11 +10,45 @@ app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["EXISTING_ZIPS_FOLDER"] = INPUT_ZIPS_FOLDER
 app.config["ZIP_REGISTRY_FILE"] = ZIP_REGISTRY_PATH
-app.config["MARC_EXISTING_ZIPS_FOLDER"] = "/mnt/mi_rek"
-app.config["MARC_EXISTING_FOLDERS_ROOT"] = "/mnt/mi_rek"
-app.config["MARC_RESULTS_FOLDER"] = "/mnt/mi_rek/results"
 app.config["MARC_HIDDEN_FOLDERS"] = {"results"}
 os.makedirs(app.config["EXISTING_ZIPS_FOLDER"], exist_ok=True)
+
+DEFAULT_MARC_ROOT = "/mnt/mi_rek"
+DEFAULT_MARC_RESULTS_FOLDER = "/mnt/mi_rek/results"
+
+
+def configure_marc_paths(
+    marc_root=None,
+    marc_results_folder=None,
+    marc_existing_zips_folder=None
+):
+    marc_root = (
+        marc_root
+        or os.environ.get("MARC_EXISTING_FOLDERS_ROOT")
+        or os.environ.get("MARC_ROOT")
+        or DEFAULT_MARC_ROOT
+    )
+    marc_results_folder = (
+        marc_results_folder
+        or os.environ.get("MARC_RESULTS_FOLDER")
+        or (
+            DEFAULT_MARC_RESULTS_FOLDER
+            if marc_root == DEFAULT_MARC_ROOT
+            else os.path.join(marc_root, "results")
+        )
+    )
+    marc_existing_zips_folder = (
+        marc_existing_zips_folder
+        or os.environ.get("MARC_EXISTING_ZIPS_FOLDER")
+        or marc_root
+    )
+
+    app.config["MARC_EXISTING_ZIPS_FOLDER"] = marc_existing_zips_folder
+    app.config["MARC_EXISTING_FOLDERS_ROOT"] = marc_root
+    app.config["MARC_RESULTS_FOLDER"] = marc_results_folder
+
+
+configure_marc_paths()
 
 executor = ThreadPoolExecutor(max_workers=4)
 jobs = {}
@@ -1089,5 +1123,29 @@ def jobs_archive():
     )
 
 
+
+def parse_runtime_args():
+    parser = argparse.ArgumentParser(description="Run the OpenRouter batch processor Flask app.")
+    parser.add_argument(
+        "--marc-root",
+        help="Root folder for the MARC existing-folder picker. Defaults to MARC_EXISTING_FOLDERS_ROOT, MARC_ROOT, or /mnt/mi_rek."
+    )
+    parser.add_argument(
+        "--marc-results-folder",
+        help="Folder where MARC concatenated results are saved. Defaults to MARC_RESULTS_FOLDER or <marc-root>/results."
+    )
+    parser.add_argument(
+        "--marc-existing-zips-folder",
+        help="Folder for MARC existing ZIP files. Defaults to MARC_EXISTING_ZIPS_FOLDER or <marc-root>."
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = parse_runtime_args()
+    configure_marc_paths(
+        marc_root=args.marc_root,
+        marc_results_folder=args.marc_results_folder,
+        marc_existing_zips_folder=args.marc_existing_zips_folder
+    )
     app.run(host="0.0.0.0", port=9513, debug=True, threaded=True)
